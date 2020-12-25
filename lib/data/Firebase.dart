@@ -15,13 +15,13 @@ var userRef = rootRef.collection('users');
 var notificationRef = rootRef.collection('notifications');
 
 
-FutureBuilder<DocumentSnapshot> loadName(String uid){
+FutureBuilder<DocumentSnapshot> loadName(String uid, TextStyle style){
   return FutureBuilder(builder: (builder, snapshot){
     // if(snapshot.hasData)
     //   return snapshot.
     if(snapshot.hasData) {
       var user = UserData.fromJson(snapshot.data.data());
-      return Text(user.name.capitalize());
+      return Text(user.name.capitalize(), style: style,);
     }
     return Text('');
 
@@ -41,7 +41,7 @@ FutureBuilder<DocumentSnapshot> loadFamilyCode(String familyId){
     //   return snapshot.
     if(snapshot.hasData) {
       var family = Family.fromJson(snapshot.data.data());
-      return Text(family.code, style: Theme.of(builder).textTheme.headline3.copyWith(color: Colors.blue, fontFamily: "raleway"));
+      return Text(family.code, style: GoogleFonts.ubuntu().copyWith(color: Theme.of(builder).accentColor, fontSize: 36));
     }
     return circularProgressBar;
 

@@ -1,16 +1,18 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
-import 'package:family_expense/ui/auth/JoinFamilyWidget.dart';
+import 'file:///D:/Flutter/projects/FamilyExpense/family_expense/lib/ui/items/AddItemDialogWidget.dart';
 import 'package:family_expense/ui/family/FamilyWidget.dart';
+import 'package:family_expense/ui/items/ViewItemsWidget.dart';
 import 'package:family_expense/ui/profile/MyProfileWidget.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:family_expense/data/Firebase.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
@@ -49,7 +51,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
       body: SafeArea(
         child:  Container(
-          margin: EdgeInsets.all(16),
+          margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
           child: _homeWidgets[layoutIndex]
 
         ),
@@ -74,54 +76,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
             SizedBox(height: 30,),
 
-            Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              child: SfCartesianChart(
-                  enableAxisAnimation: true,
-                  title: ChartTitle(text : 'Monthly Expenditure'),
-                  primaryYAxis: NumericAxis(isVisible : false, anchorRangeToVisiblePoints: false),
-                  primaryXAxis: CategoryAxis(),
-                  // zoomPanBehavior: ZoomPanBehavior(
-                  //   enablePinching: true
-                  // ),
-
-                  series: <ChartSeries>[
-                    // Renders spline chart
-                    SplineAreaSeries<SalesData, String>(
-                      // color: Colors.blue,
-                        gradient: LinearGradient(
-                          // begin: Alignment.topLeft,
-                          // end: Alignment(0.8, 0.0), // 10% of the width, so there are ten blinds.
-                          colors: [
-                            Colors.blue[500],
-                            Colors.blue[400],
-                            Colors.blue[300]
-                          ], // red to yellow// repeats the gradient over the canvas
-                        ),
-                        opacity: 0.8,
-                        borderWidth: 3,
-                        borderColor: Colors.blue,
-                        dataSource: [
-                          // Bind data source
-                          SalesData('Jan', 45),
-                          SalesData('Feb', 38),
-                          SalesData('Mar', 34),
-                          SalesData('Apr', 32),
-                          SalesData('May', 40),
-                          SalesData('June', 50),
-                          SalesData('July', 40),
-                          SalesData('Aug', 50),
-                          SalesData('Sept', 55),
-                          SalesData('Oct', 60),
-                          SalesData('Nov', 30),
-                          SalesData('Dec', 40)
-                        ],
-                        yValueMapper: (SalesData sales, _) => sales.expense ,
-                        xValueMapper: (SalesData sales, num index) => sales.month
-                    )
-                  ]
-              ),
-            ),
+           _DashboardChartWidget(),
 
 
             SizedBox(height: 20,),
@@ -136,7 +91,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                       Text('Items added recently',  style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.w300, fontSize: 20)),
                       SizedBox(height: 15,),
 
-                      StreamBuilder<QuerySnapshot>(stream: itemRef.orderBy('addedOn', descending: true).where('familyId', isEqualTo: familyId).limit(5)
+                      StreamBuilder<QuerySnapshot>(stream: itemRef.orderBy('purchaseDate', descending: true).where('familyId', isEqualTo: familyId).limit(5)
                           .snapshots(),
                         builder: (context, snapshot){
 
@@ -151,8 +106,6 @@ class _HomeWidgetState extends State<HomeWidget> {
                               child: Text('No Items were added', style: Theme.of(context).textTheme.caption,),
                             );
 
-                          print('HomeWidget: items - ${snapshot.data.docs}, familyId - $familyId');
-                          print(snapshot);
                           return ListView.builder(
                             scrollDirection: Axis.vertical,
                             shrinkWrap: true,
@@ -161,19 +114,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
                               Item item = Item.fromJson(snapshot.data.docs[index].data());
 
-                              return ListTile(
-                                leading: CircleAvatar(child: Text((index+1).toString(),style: GoogleFonts.roboto().copyWith(color: Colors.white),), backgroundColor: Colors.green,),
-                                title: Text(item.itemName),
-                                subtitle: loadName(item.addedBy),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.center,mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text('₹ '),
-                                    Text(item.itemPrice.toString(), style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.w300, fontSize: 24),),
-                                  ],
-                                ),
-                              );
+                              return bindPurchaseListItem(context, item, index, true);
                             },
                             itemCount: snapshot.data.size,
 
@@ -186,6 +127,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                       ListTile(
                         title: Text('See More'),
                         trailing: Icon(Icons.arrow_right_alt_outlined, size: 40, color: Colors.blue,),
+                        onTap: ()=>Navigator.push(context, MaterialPageRoute(builder: (context)=>ViewItemsWidget(familyId: familyId))),
                       )
 
                     ],
@@ -203,196 +145,170 @@ class _HomeWidgetState extends State<HomeWidget> {
 
 
 
-  BottomNavigationBar _bottomNavigationBar(){
-    return BottomNavigationBar(
-      currentIndex: layoutIndex,
-      onTap: _onTapped,
-      items: [
-        BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
+   BottomNavigationBar _bottomNavigationBar(){
+     return BottomNavigationBar(
+       currentIndex: layoutIndex,
+       onTap: _onTapped,
+       items: [
+         BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
 
-        BottomNavigationBarItem(icon: Icon(Icons.people_alt_outlined), label: 'Family'),
+         BottomNavigationBarItem(icon: Icon(Icons.people_alt_outlined), label: 'Family'),
 
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Me')
+         BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Me')
 
-      ],
-    );
-  }
+       ],
+     );
+   }
 
-  void _onTapped(int index){
-    setState(() {
-      layoutIndex = index;
-    });
-  }
-
-
-  void showBottomAddItemDialog(){
-    var isInserting = false;
-    TextEditingController _nameController = TextEditingController();
-    TextEditingController _priceController = TextEditingController();
+   void _onTapped(int index){
+     setState(() {
+       layoutIndex = index;
+     });
+   }
 
 
-    showModalBottomSheet<void>(context: _scaffold.currentContext, builder: (BuildContext context) {
+   void showBottomAddItemDialog(){
 
-      var purchaseDate = DateTime.now().millisecondsSinceEpoch;
+     Navigator.push(_scaffold.currentContext, MaterialPageRoute(builder: (context) => AddItemDialogWidget(familyId: familyId,)));
 
-      return FutureBuilder<QuerySnapshot>(
-        future: familyMemberRef.where("uid", isEqualTo: uid).where("familyId", isEqualTo: familyId).where('verified', isEqualTo: true).get(),
-        builder: (context, snapshot){
+   }
+ }
 
-          if(snapshot.connectionState == ConnectionState.waiting)
-            return circularProgressBar;
+ class _DashboardChartWidget extends StatefulWidget {
+   @override
+   __DashboardChartWidgetState createState() => __DashboardChartWidgetState();
+ }
 
-          if(!snapshot.hasData || snapshot.hasError)
-            return textMessage('You are not allowed to add items. Contact the moderator');
+ class __DashboardChartWidgetState extends State<_DashboardChartWidget> {
+   @override
+   Widget build(BuildContext context) {
+     return  Card(
+       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+       child: Stack( children: [_dashboardChart(startYearMillis, currentMillis, currentMonth, currentYear)])
+     );
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical : 20.0),
-                child: Text('Add your item!', style: Theme.of(context).textTheme.headline5.copyWith(fontWeight: FontWeight.w400),),
-              ),
-
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: TextField(
-                  autofocus: true,
-                  controller: _nameController,
-                  keyboardType: TextInputType.multiline,
-                  style: TextStyle().copyWith(fontSize: 26, fontWeight: FontWeight.w500 ),
-                  decoration: InputDecoration(
-                      labelText: "What would you like to add?",
-                      labelStyle: TextStyle(fontWeight: FontWeight.w300,  fontSize: 22, ),
-                      hintText: "Name of the Item",
-                      border: InputBorder.none,
-                      hintStyle: TextStyle().copyWith(fontSize: 26, fontWeight: FontWeight.w300, color: Colors.grey[400])
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 30,),
-
-              Row(
-                children: [
-
-                  Flexible(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: TextField(
-                        controller: _priceController,
-                        autofocus: true,
-                        keyboardType: TextInputType.number,
-                        style: TextStyle().copyWith(fontSize: 26, fontWeight: FontWeight.w500 ),
-                        decoration: InputDecoration(
-                            labelText: "Enter its Price",
-                            labelStyle: TextStyle(fontWeight: FontWeight.w300,  fontSize: 22, ),
-                            hintText: "Price",
-                            border: InputBorder.none,
-                            hintStyle: TextStyle().copyWith(fontSize: 26, fontWeight: FontWeight.w300, color: Colors.grey[400])
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(width: 20),
-
-                  GestureDetector(
-                    child: Container(
-                      margin: EdgeInsets.symmetric(horizontal: 10),
-                      padding: EdgeInsets.symmetric(vertical: 6, horizontal: 20),
-                      height: 50,
-                      // width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: Color(0xFFE5E5E5),
-                        ),
-                      ),
-                      child:  Row(
-                        children: [
-                          Text('Today', style: Theme.of(context).textTheme.headline6.copyWith(fontWeight: FontWeight.w300),),
-                          Icon(Icons.arrow_drop_down_sharp)
-                          // SvgPicture.asset("assets/icons/dropdown.svg")
-                          // SvgPicture.asset("assets/icons/dropdown.svg", height: 40,),
-
-                        ],
-                      ),
-                    ),
-                    onTap: (){
-                      //show date picker
-                    },
-                  )
-                ],
-              ),
+   }
 
 
-              SizedBox(height: 50,),
+   var currentYear = DateTime.now().year;
+   var startYearMillis = DateFormat("dd-MM-yyyy").parse("01-01-${DateTime.now().year}").millisecondsSinceEpoch;
+   var currentMillis = DateTime.now().millisecondsSinceEpoch;
+   var currentMonth =  DateTime.now().month;
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  MaterialButton(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                    color: Colors.grey[200],
-                    padding: EdgeInsets.only(left: 40, right: 40, top: 10, bottom: 10),
-                    child: Text('Cancel', style: TextStyle().copyWith(fontSize: 22, color: Colors.black, fontWeight: FontWeight.w400),),
+  Widget _dashboardChart(int start, int end, int selectedMonth, int selectedYear) {
 
-                    onPressed: (){
-                      Navigator.of(context).pop();
-                    },
-                  ),
+     List<int> millisStartOfMonth = [];
 
-                  SizedBox(width: 20,),
+     for(int i=1; i<=selectedMonth;i++){
+       var date = "01-$i-$selectedYear";
+       print('Date => $date');
+       var millisOfMonth = DateFormat("dd-M-yyyy").parse(date).millisecondsSinceEpoch;
+       millisStartOfMonth.add(millisOfMonth);
+     }
 
-                  MaterialButton(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                    color: Colors.grey[200],
-                    padding: EdgeInsets.only(left: 40, right: 40, top: 10, bottom: 10),
-                    child: Text('Add Item', style: TextStyle().copyWith(fontSize: 22, color: Colors.black, fontWeight: FontWeight.w400),),
+     Map<int,int> intervals = Map();
+     for(int i=0; i<selectedMonth-1;i++){
+       intervals[millisStartOfMonth[i]] = millisStartOfMonth[i+1];
+     }
+     //intervals has upto last month
+     //add interval from last month to current millis, if both are same months
+     intervals[millisStartOfMonth.last] = end;
 
-                    onPressed: (){
-                      if(isInserting)
-                        return;
+     print(intervals);
 
-                      if(familyId.isEmpty){
-                        Navigator.popUntil(context, ModalRoute.withName('/'),);
+     return FutureBuilder<QuerySnapshot>(
+       future: itemRef.orderBy('purchaseDate').where('purchaseDate', isGreaterThanOrEqualTo: start ).where('purchaseDate', isLessThanOrEqualTo: end).get(),
+       builder: (context, snapshot){
 
-                        Navigator.push(context, MaterialPageRoute(builder: (builder)=>JoinOrCreateFamilyWidget()));
-                        Fluttertoast.showToast(msg: "You have not joined any family yet.");
-                      }
+         if(snapshot.connectionState == ConnectionState.waiting)
+           return Center(child: circularProgressBar );
 
-                      if(_nameController.text.isEmpty || _priceController.text.isEmpty){
-                        showSnackBar(context, "All fields required");
-                        return;
-                      }
+         if(snapshot.hasError) {
+            print(snapshot.error);
+           return textMessage(snapshot.error.toString());
+         }
+         var items = snapshot.data.docs.map((e) => Item.fromJson(e.data()));
 
-                      //insert item
-                      String itemId = "Item_${DateTime.now().millisecondsSinceEpoch}";
-                      var time = DateTime.now().millisecondsSinceEpoch;
+         //calculate month wise average in intervals
+         var averagePerMonth = [];
+         var totalPerMonth = [];
+         List<SalesData> salesList = [];
+         intervals.forEach((startMillis, endMillis) {
+           var count = 0;
+           var sum = items.map((e) => e.purchaseDate>=startMillis && e.purchaseDate <= endMillis ? e.itemPrice : 0).reduce((item1, item2) {
+             count++;
+             return item1 + item2;
+           });
 
-                      Item item = Item(itemId: itemId, familyId: familyId, addedOn: time, updatedOn: time,
-                          itemPrice: int.parse(_priceController.text) , addedBy: uid, purchaseDate: purchaseDate,itemName: _nameController.text);
+           totalPerMonth.add(sum);
+           var average = (sum/count).round();
+           averagePerMonth.add(average);
+           salesList.add(SalesData(formatDateWithFormatter(startMillis, 'MMM'), sum.roundToDouble()));
+         });
+         print('Average List => $averagePerMonth');
+         print('Total List => $totalPerMonth');
 
-                      itemRef.doc(itemId).set(item.toJson())
-                          .then((value)  {
-                        showSnackBar(context, "Item Added");
-                        Navigator.of(context).pop();
 
-                      });
+         return SfCartesianChart(
+             enableAxisAnimation: true,
+             plotAreaBorderWidth: 0,
+             title: ChartTitle(text: 'This Year'),
+             tooltipBehavior: TooltipBehavior(
+                 enable: true
+             ),
+             primaryYAxis: NumericAxis(isVisible: false, labelFormat: '${getCurrency()} {value}' , name: 'Expenses'),
+             primaryXAxis: CategoryAxis(axisLine: AxisLine(width: 0),
+                 majorGridLines: MajorGridLines(
+                 width: 0,),
+                 minorTicksPerInterval:0),
 
-                    },
-                  ),
-                ],
-              ),
-            ],
-          );
-        }
-      );
+             series: <ChartSeries>[
+               // Renders spline chart
+               SplineAreaSeries<SalesData, String>(
+                 // color: Colors.blue,
+                 enableTooltip: true,
+                   gradient: LinearGradient(
+                     // begin: Alignment.topLeft,
+                     // end: Alignment(0.8, 0.0), // 10% of the width, so there are ten blinds.
+                     colors: [
+                       hexToColor("#00c6ff"),
+                       hexToColor("#0072ff"),
+                     ], // red to yellow// repeats the gradient over the canvas
+                   ),
+                   opacity: 0.8,
+                   borderWidth: 0,
+                   borderColor: Colors.red,
+                   dataSource: _sampleList,
+                   yValueMapper: (SalesData sales, _) => sales.expense,
+                   xValueMapper: (SalesData sales, num index) => sales.month
+               )
+             ]
+         );
+       },
+      ) ;
 
-    });
-  }
-}
+
+   }
+
+
+ }
+
+
+var _sampleList = [
+  // Bind data source
+  SalesData('Jan', 45),
+  SalesData('Feb', 38),
+  SalesData('Mar', 34),
+  SalesData('Apr', 32),
+  SalesData('May', 40),
+  SalesData('June', 50),
+  SalesData('July', 40),
+  SalesData('Aug', 50),
+  SalesData('Sept', 55),
+  SalesData('Oct', 60),
+  SalesData('Nov', 30),
+  SalesData('Dec', 40)
+];
 
 class SalesData {
 

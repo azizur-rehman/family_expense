@@ -1,6 +1,6 @@
 # family_expense
 
-A daily expense sheet for your ui.family
+A daily expense sheet for your family
 
 ## Getting Started
 

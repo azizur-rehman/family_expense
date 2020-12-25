@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:confirm_dialog/confirm_dialog.dart';
 import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,18 +18,27 @@ class FamilyWidget extends StatefulWidget {
 
 class _FamilyWidgetState extends State<FamilyWidget> {
 
-  var isModerator = false;
+  var isAmModerator = false;
 
   @override
   Widget build(BuildContext context) {
 
     return SingleChildScrollView(
 
-      child: StreamBuilder<SharedPreferences>(
-        stream: getPref().asStream(),
+      child: FutureBuilder<SharedPreferences>(
+        future: getPref(),
         builder: (context, pref) {
 
-        if(pref.hasData)
+          if(pref.hasError)
+            return textMessage(pref.error.toString());
+
+          if(!pref.hasData)
+            return circularProgressBar;
+
+          String familyId = pref.data.getString(uid);
+          print('Family Id - $familyId');
+          print(pref.data.getKeys());
+
           return Container(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -44,7 +55,7 @@ class _FamilyWidgetState extends State<FamilyWidget> {
                         Text('Use this code to Join',  style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.w100, fontSize: 12)),
                         SizedBox(height: 15,),
                         //family id
-                        if(pref.data.getString(uid) != null) loadFamilyCode(pref.data.getString(uid))
+                        if(familyId != null) loadFamilyCode(familyId)
                         else Padding(padding: const EdgeInsets.all(8.0), child: Text('Failed to load Family Code'),)
 
 
@@ -66,7 +77,8 @@ class _FamilyWidgetState extends State<FamilyWidget> {
 
                           Divider(height: 1,color: Colors.grey,),
 
-                          FutureBuilder<QuerySnapshot>(future: familyMemberRef.where('familyId', isEqualTo: pref.data.getString(uid)).get(),
+                          StreamBuilder<QuerySnapshot>(
+                            stream: familyMemberRef.where('familyId', isEqualTo: familyId).snapshots(),
                             builder: (context, snapshot){
 
                               if(snapshot.hasError)
@@ -75,7 +87,7 @@ class _FamilyWidgetState extends State<FamilyWidget> {
                               if(!snapshot.hasData)
                                 return circularProgressBar;
 
-                              isModerator = FamilyMember.fromJson(snapshot.data.docs.firstWhere((element) => element.get("uid") == uid).data()).moderator;
+                              isAmModerator = FamilyMember.fromJson(snapshot.data.docs.firstWhere((element) => element.get("uid") == uid).data()).moderator;
 
                               return ListView.builder(
                                 scrollDirection: Axis.vertical,
@@ -85,19 +97,31 @@ class _FamilyWidgetState extends State<FamilyWidget> {
 
                                   FamilyMember member = FamilyMember.fromJson(snapshot.data.docs[index].data());
 
-                                  return ListTile(
-                                    leading: CircleAvatar(child: Text((index+1).toString(),style: Theme.of(context).textTheme.headline5,), backgroundColor: Colors.green,),
-
-                                    title: loadName(member.uid),
-                                    subtitle: _getListSubtitle(member),
-
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.center,mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        member.moderator ? Container( decoration: BoxDecoration(borderRadius: BorderRadius.circular(16),border: Border.all(width: 0.1, color: Theme.of(context).textTheme.bodyText1.color) ), child: Text('Moderator', style: Theme.of(context).textTheme.caption,), padding: EdgeInsets.all(10),) : SizedBox()
+                                  return Slidable(
+                                      actionPane: SlidableDrawerActionPane(),
+                                      actionExtentRatio: 0.25,
+                                      secondaryActions: <Widget>[
+                                       IconSlideAction(
+                                          caption: 'Remove',
+                                          color: Colors.red,
+                                          iconWidget: Icon(Icons.delete),
+                                          onTap: () => _removeMember(member),
+                                        ),
                                       ],
+                                      child: ListTile(
+                                      leading: numberAvatar(index),
+                                      title: loadName(member.uid, Theme.of(context).textTheme.subtitle1),
+                                      subtitle: _getListSubtitle(member),
+
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.center,mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          member.moderator ? Container( decoration: BoxDecoration(borderRadius: BorderRadius.circular(16),border: Border.all(width: 0.1, color: Theme.of(context).textTheme.bodyText1.color) ), child: Text('Moderator', style: Theme.of(context).textTheme.caption,), padding: EdgeInsets.all(10),) : SizedBox()
+                                        ],
+                                      ),
                                     ),
+
                                   );
                                 },
                                 itemCount: snapshot.data.size,
@@ -115,7 +139,6 @@ class _FamilyWidgetState extends State<FamilyWidget> {
             ),
           );
 
-        return circularProgressBar;
       },
       ),
 
@@ -130,7 +153,7 @@ class _FamilyWidgetState extends State<FamilyWidget> {
     if(member.verified)
       return Text(uid == member.uid ? 'You' : '');
 
-    if(isModerator)
+    if(isAmModerator)
       //someone else
       return Row(
         //accept button
@@ -140,7 +163,9 @@ class _FamilyWidgetState extends State<FamilyWidget> {
             buttonColor: Colors.red,
             child: RaisedButton(
               textColor: Colors.white,
-              onPressed: () {},
+              onPressed: () {
+                _removeMember(member);
+              },
               child: Text("Reject"),
             ),
           ),
@@ -151,7 +176,12 @@ class _FamilyWidgetState extends State<FamilyWidget> {
             buttonColor: Colors.green,
             child: RaisedButton(
               textColor: Colors.white,
-              onPressed: () {},
+              onPressed: () {
+                showProgressSnack(context, 'Accepting Member');
+                familyMemberRef.doc(member.uid).update({'verified':true})
+                    .then((value) => showSnackBar(context, 'Member request accepted'))
+                    .catchError( (onError) => ScaffoldMessenger.of(context).hideCurrentSnackBar());
+              },
               child: Text("Accept"),
             ),
           )
@@ -159,6 +189,30 @@ class _FamilyWidgetState extends State<FamilyWidget> {
       );
 
     return SizedBox();
+  }
+
+  void _removeMember(FamilyMember member)async{
+    var confirmPrompt = await showConfirmDialog(context, 'Would you like to remove this member?');
+
+    if(!confirmPrompt)
+      return;
+
+    if(!isAmModerator){
+      showSnackBar(context, "You don't have authority to remove a member");
+      return;
+    }
+
+    if(member.uid == uid){
+      //me
+      showSnackBar(context, "You cannot remove yourself as a member");
+      return;
+    }
+
+    showProgressSnack(context, 'Removing Member');
+    familyMemberRef.doc(member.uid).delete()
+        .then((value) { ScaffoldMessenger.of(context).hideCurrentSnackBar(); showSnackBar(context, 'Member removed');})
+        .catchError( (onError) => ScaffoldMessenger.of(context).hideCurrentSnackBar());
+
   }
 
 }

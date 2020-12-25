@@ -1,5 +1,5 @@
 name: family_expense
-description: A daily expense sheet for your ui.family
+description: A daily expense sheet for your family
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
@@ -43,6 +43,10 @@ dependencies:
   fl_chart: ^0.12.1
   syncfusion_flutter_charts: ^18.4.30
   random_string: ^2.1.0
+  intl: ^0.16.1
+  grouped_list: ^3.7.1
+  flutter_slidable: ^0.5.7
+  confirm_dialog: ^0.1.1
 
 
 dev_dependencies:
