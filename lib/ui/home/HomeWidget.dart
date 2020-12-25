@@ -10,6 +10,7 @@ import 'package:family_expense/ui/items/ViewItemsWidget.dart';
 import 'package:family_expense/ui/profile/MyProfileWidget.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:family_expense/data/Firebase.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -182,9 +183,56 @@ class _HomeWidgetState extends State<HomeWidget> {
  class __DashboardChartWidgetState extends State<_DashboardChartWidget> {
    @override
    Widget build(BuildContext context) {
-     return  Card(
-       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-       child: Stack( children: [_dashboardChart(startYearMillis, currentMillis, currentMonth, currentYear)])
+     return  Column(
+       children: [
+
+         GestureDetector(
+           child: Container(
+             margin: EdgeInsets.symmetric(horizontal: 10),
+             padding: EdgeInsets.symmetric(vertical: 6, horizontal: 20),
+             height: 40,
+             // width: double.infinity,
+             decoration: BoxDecoration(
+               borderRadius: BorderRadius.circular(25),
+               border: Border.all(
+                 color: Color(0xFFE5E5E5),
+               ),
+             ),
+             child:  GestureDetector(
+               child: Row(
+                 children: [
+                   Text(formattedDate(currentMillis), style: Theme.of(context).textTheme.subtitle1.copyWith(fontWeight: FontWeight.w300),),
+                   Icon(Icons.arrow_drop_down_sharp)
+                   // SvgPicture.asset("assets/icons/dropdown.svg")
+                   // SvgPicture.asset("assets/icons/dropdown.svg", height: 40,),
+
+                 ],
+               ),
+               onTap: ()async{
+
+
+                 // setState(() {
+                   //show date picker
+                   // purchaseDateInMillis = picker.millisecondsSinceEpoch;
+                   // print(formattedDate(purchaseDateInMillis));
+
+                 // });
+               },
+             ),
+           ),
+           onTap: (){
+             //show date picker
+           },
+         ),
+         Card(
+           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+           child: Stack( children: [
+             _dashboardChart(startYearMillis, currentMillis,
+                 _getYearlyInterval(startYearMillis, currentMillis, currentMonth, currentYear))
+           ]
+           )
+         ),
+       ],
      );
 
    }
@@ -195,24 +243,9 @@ class _HomeWidgetState extends State<HomeWidget> {
    var currentMillis = DateTime.now().millisecondsSinceEpoch;
    var currentMonth =  DateTime.now().month;
 
-  Widget _dashboardChart(int start, int end, int selectedMonth, int selectedYear) {
+   var thisMonthMillis = DateFormat("dd-MM-yyyy").parse("01-${DateTime.now().month}-${DateTime.now().year}").millisecondsSinceEpoch;
 
-     List<int> millisStartOfMonth = [];
-
-     for(int i=1; i<=selectedMonth;i++){
-       var date = "01-$i-$selectedYear";
-       print('Date => $date');
-       var millisOfMonth = DateFormat("dd-M-yyyy").parse(date).millisecondsSinceEpoch;
-       millisStartOfMonth.add(millisOfMonth);
-     }
-
-     Map<int,int> intervals = Map();
-     for(int i=0; i<selectedMonth-1;i++){
-       intervals[millisStartOfMonth[i]] = millisStartOfMonth[i+1];
-     }
-     //intervals has upto last month
-     //add interval from last month to current millis, if both are same months
-     intervals[millisStartOfMonth.last] = end;
+  Widget _dashboardChart(int start, int end, Map<int,int> intervals) {
 
      print(intervals);
 
@@ -230,9 +263,11 @@ class _HomeWidgetState extends State<HomeWidget> {
          var items = snapshot.data.docs.map((e) => Item.fromJson(e.data()));
 
          //calculate month wise average in intervals
-         var averagePerMonth = [];
+         // var averagePerMonth = [];
          var totalPerMonth = [];
+         var format = 'MMM';
          List<SalesData> salesList = [];
+
          intervals.forEach((startMillis, endMillis) {
            var count = 0;
            var sum = items.map((e) => e.purchaseDate>=startMillis && e.purchaseDate <= endMillis ? e.itemPrice : 0).reduce((item1, item2) {
@@ -241,56 +276,101 @@ class _HomeWidgetState extends State<HomeWidget> {
            });
 
            totalPerMonth.add(sum);
-           var average = (sum/count).round();
-           averagePerMonth.add(average);
-           salesList.add(SalesData(formatDateWithFormatter(startMillis, 'MMM'), sum.roundToDouble()));
+           // var average = (sum/count).round();
+           // averagePerMonth.add(average);
+           salesList.add(SalesData(formatDateWithFormatter(startMillis, format), sum.roundToDouble()));
          });
-         print('Average List => $averagePerMonth');
+         // print('Average List => $averagePerMonth');
          print('Total List => $totalPerMonth');
 
+         return plotGraph(salesList, 'This Year');
 
-         return SfCartesianChart(
-             enableAxisAnimation: true,
-             plotAreaBorderWidth: 0,
-             title: ChartTitle(text: 'This Year'),
-             tooltipBehavior: TooltipBehavior(
-                 enable: true
-             ),
-             primaryYAxis: NumericAxis(isVisible: false, labelFormat: '${getCurrency()} {value}' , name: 'Expenses'),
-             primaryXAxis: CategoryAxis(axisLine: AxisLine(width: 0),
-                 majorGridLines: MajorGridLines(
-                 width: 0,),
-                 minorTicksPerInterval:0),
-
-             series: <ChartSeries>[
-               // Renders spline chart
-               SplineAreaSeries<SalesData, String>(
-                 // color: Colors.blue,
-                 enableTooltip: true,
-                   gradient: LinearGradient(
-                     // begin: Alignment.topLeft,
-                     // end: Alignment(0.8, 0.0), // 10% of the width, so there are ten blinds.
-                     colors: [
-                       hexToColor("#00c6ff"),
-                       hexToColor("#0072ff"),
-                     ], // red to yellow// repeats the gradient over the canvas
-                   ),
-                   opacity: 0.8,
-                   borderWidth: 0,
-                   borderColor: Colors.red,
-                   dataSource: _sampleList,
-                   yValueMapper: (SalesData sales, _) => sales.expense,
-                   xValueMapper: (SalesData sales, num index) => sales.month
-               )
-             ]
-         );
        },
       ) ;
 
 
    }
 
+   Widget plotGraph(List<SalesData> salesList, String title){
 
+     return SfCartesianChart(
+         enableAxisAnimation: true,
+         plotAreaBorderWidth: 0,
+         margin: EdgeInsets.only(top: 20, bottom: 10),
+         title: ChartTitle(text: title),
+         tooltipBehavior: TooltipBehavior(
+           enable: true,
+         ),
+         primaryYAxis: NumericAxis(isVisible: false, labelFormat: '${getCurrency()} {value}' , rangePadding: ChartRangePadding.auto),
+         primaryXAxis: CategoryAxis(majorGridLines: MajorGridLines(width: 0,), minorTicksPerInterval:0,
+             majorTickLines: MajorTickLines(width:0)),
+
+         series: <ChartSeries>[
+           // Renders spline chart
+           SplineAreaSeries<SalesData, String>(
+             // color: Colors.blue,
+               enableTooltip: true,
+               name: 'Expenses',
+               gradient: LinearGradient(
+                 // begin: Alignment.topLeft,
+                 // end: Alignment(0.8, 0.0), // 10% of the width, so there are ten blinds.
+                 colors: [
+                   hexToColor("#00c6ff"),
+                   hexToColor("#0072ff"),
+                 ], // red to yellow// repeats the gradient over the canvas
+               ),
+               borderWidth: 2,
+               borderColor: Colors.blue,
+               dataSource: salesList,
+               yValueMapper: (SalesData sales, _) => sales.expense,
+               xValueMapper: (SalesData sales, num index) => sales.month
+           )
+         ]
+     );
+   }
+
+   Map<int,int> _getYearlyInterval(int start, int end, int selectedMonth, int selectedYear){
+
+     List<int> millisStartOfMonth = [];
+
+     for(int i=1; i<=selectedMonth;i++){
+       var date = "01-$i-$selectedYear";
+       // print('Date => $date');
+       var millisOfMonth = DateFormat("dd-M-yyyy").parse(date).millisecondsSinceEpoch;
+       millisStartOfMonth.add(millisOfMonth);
+     }
+
+     Map<int,int> intervals = Map();
+     for(int i=0; i<selectedMonth-1;i++){
+       intervals[millisStartOfMonth[i]] = millisStartOfMonth[i+1];
+     }
+     //intervals has upto last month
+     //add interval from last month to current millis, if both are same months
+     intervals[millisStartOfMonth.last] = end;
+     return intervals;
+   }
+
+
+   Map<int,int> _getThisMonth(int start, int end, int selectedMonth, int selectedYear){
+
+     List<int> millisStartOfMonth = [];
+
+     for(int i=1; i<=selectedMonth;i++){
+       var date = "01-$i-$selectedYear";
+       // print('Date => $date');
+       var millisOfMonth = DateFormat("dd-M-yyyy").parse(date).millisecondsSinceEpoch;
+       millisStartOfMonth.add(millisOfMonth);
+     }
+
+     Map<int,int> intervals = Map();
+     for(int i=0; i<selectedMonth-1;i++){
+       intervals[millisStartOfMonth[i]] = millisStartOfMonth[i+1];
+     }
+     //intervals has upto last month
+     //add interval from last month to current millis, if both are same months
+     intervals[millisStartOfMonth.last] = end;
+     return intervals;
+   }
  }
 
 
@@ -315,4 +395,8 @@ class SalesData {
   SalesData(this.month, this.expense);
   final String month;
   final double expense;
+}
+
+enum ChartType{
+  YEARLY, MONTHLY
 }

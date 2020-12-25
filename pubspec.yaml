@@ -47,6 +47,7 @@ dependencies:
   grouped_list: ^3.7.1
   flutter_slidable: ^0.5.7
   confirm_dialog: ^0.1.1
+#  flutter_cupertino_date_picker: ^1.0.26+2
 
 
 dev_dependencies:
