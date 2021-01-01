@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,15 +14,63 @@ var familyMemberRef = rootRef.collection("family_members");
 var itemRef = rootRef.collection('items');
 var userRef = rootRef.collection('users');
 var notificationRef = rootRef.collection('notifications');
+var familyPaymentsRef = rootRef.collection('family_payments');
+var familyExpenseRef = rootRef.collection('family_expense');
+var messagingRef = rootRef.collection('messages');
+
+const String key_familyId = 'familyId';
+const String key_amount = 'amount', key_remaining = 'remaining';
 
 
-FutureBuilder<DocumentSnapshot> loadName(String uid, TextStyle style){
+Widget loadName(String uid, TextStyle style){
+  print('Loading name for - $uid');
+  if(currentUser.uid == uid)
+    return Text(currentUser.displayName.capitalize(), style: style,);
+
   return FutureBuilder(builder: (builder, snapshot){
     // if(snapshot.hasData)
     //   return snapshot.
-    if(snapshot.hasData) {
-      var user = UserData.fromJson(snapshot.data.data());
-      return Text(user.name.capitalize(), style: style,);
+    if(snapshot.hasData && !snapshot.hasError) {
+      try {
+        var user = UserData.fromJson(snapshot.data.data());
+        return Text(user.name.capitalize(), style: style,);
+      }
+      catch(e){
+        print('err - $e');
+        return Text('No Name');
+      }
+    }
+    return Text('Loading...');
+
+  }, future: userRef.doc(uid).get());
+}
+
+
+String getStringInitials(String text){
+  print('Getting initials for -> $text');
+  try { return text.split(' ').reduce((value, element) => '${value[0].toUpperCase()}${element[0]}').toUpperCase(); }
+  catch(e){
+    return text[0].toUpperCase();
+  }
+}
+
+Widget loadNameAvatar(String uid){
+  print('Loading name for - $uid');
+  if(currentUser.uid == uid)
+    return circleAvatar(getStringInitials(currentUser.displayName));
+
+  return FutureBuilder(builder: (builder, snapshot){
+    // if(snapshot.hasData)
+    //   return snapshot.
+    if(snapshot.hasData && !snapshot.hasError) {
+      try {
+        var user = UserData.fromJson(snapshot.data.data());
+        return circleAvatar(getStringInitials(user.name));
+      }
+      catch(e){
+        print('err - $e');
+        return Text('');
+      }
     }
     return Text('');
 
@@ -41,7 +90,13 @@ FutureBuilder<DocumentSnapshot> loadFamilyCode(String familyId){
     //   return snapshot.
     if(snapshot.hasData) {
       var family = Family.fromJson(snapshot.data.data());
-      return Text(family.code, style: GoogleFonts.ubuntu().copyWith(color: Theme.of(builder).accentColor, fontSize: 36));
+      return Column(
+        children: [
+          // QrImage(data: family.code, size: 320, gapless: false,),
+          // textMessage('Or'),
+          Text(family.code, style: GoogleFonts.ubuntu().copyWith(color: Theme.of(builder).accentColor, fontSize: 36)),
+        ],
+      );
     }
     return circularProgressBar;
 

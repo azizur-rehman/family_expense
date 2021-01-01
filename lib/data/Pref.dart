@@ -1,3 +1,4 @@
+import 'package:country_codes/country_codes.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,7 +13,7 @@ void saveKey(String key, String value) {
   });
 }
 
-Future<String> getValue(String key)async{
+Future<String> getPrefValue(String key)async{
   return await getPref().then((value) => value.getString(key));
 }
 
@@ -31,3 +32,4 @@ void deleteKey(String key)async{
 
 User currentUser = FirebaseAuth.instance.currentUser;
 String uid = currentUser.uid;
+String currentDialCode = CountryCodes.dialNumbers().firstWhere((element) => currentUser.phoneNumber.startsWith(element));

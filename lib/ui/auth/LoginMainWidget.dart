@@ -1,9 +1,15 @@
+import 'dart:io';
+
+import 'package:country_codes/country_codes.dart';
+import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/ui/auth/OTPWidget.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/locale.dart';
 
 class LoginMainWidget extends StatefulWidget {
   @override
@@ -15,6 +21,14 @@ class _LoginMainWidgetState extends State<LoginMainWidget> {
   final TextEditingController _phoneNumController = TextEditingController();
 
   @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    CountryCodes.init();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
@@ -24,6 +38,7 @@ class _LoginMainWidgetState extends State<LoginMainWidget> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+
                 SvgPicture.asset("assets/icons/login.svg", height: 240,),
 
                 SizedBox(height: 30,),
@@ -67,9 +82,10 @@ class _LoginMainWidgetState extends State<LoginMainWidget> {
                         Fluttertoast.showToast(msg: validatedText);
                         return;
                       }
+                      String dialCode = CountryCodes.dialCode();
                       //Do phone authentication
                       Navigator.push(context, MaterialPageRoute(
-                          builder: (context) => OTPWidget(phone: phone,)
+                          builder: (context) => OTPWidget(phone: '$dialCode$phone',)
                       ));
                     });
                   },

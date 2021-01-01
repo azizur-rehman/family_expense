@@ -24,7 +24,7 @@ class ViewItemsWidget extends StatelessWidget {
               mainAxisSize: MainAxisSize.max,
               children: [
 
-                StreamBuilder<QuerySnapshot>(stream: itemRef.orderBy('purchaseDate').where('familyId', isEqualTo: familyId)
+                StreamBuilder<QuerySnapshot>(stream: itemRef.orderBy('purchaseDate', descending: true).where('familyId', isEqualTo: familyId)
                     .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -40,6 +40,7 @@ class ViewItemsWidget extends StatelessWidget {
                     }
                     var elements = snapshot.data.docs.map((e) => Item.fromJson(e.data())).toList();
                     var position = 0;
+                    elements.forEach((element) { print(formattedDate(element.purchaseDate));});
 
 
                     return GroupedListView<Item, String>(
@@ -47,14 +48,13 @@ class ViewItemsWidget extends StatelessWidget {
                       shrinkWrap: true,
                       elements: elements,
                       groupBy: (element) => formattedDate(element.purchaseDate),
-                      groupSeparatorBuilder: (String groupByValue) { position=0;
-                      return Center(child: textMessage(groupByValue),);  },
+                      groupSeparatorBuilder: (String groupByValue) { position=0;return Center(child: textMessage(groupByValue),);  },
                       itemBuilder: (BuildContext context, Item element) {
                         return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             child: bindPurchaseListItem(context, element, position++, false));
                       },
 
-                      // itemComparator: (item1, item2) => item1['name'].compareTo(item2['name']), // optional
+                      itemComparator: (item1, item2) => item1.purchaseDate.compareTo(item2.purchaseDate), // optional
                       useStickyGroupSeparators: true,
                       // optional
                       floatingHeader: true,
@@ -70,5 +70,7 @@ class ViewItemsWidget extends StatelessWidget {
       ),
     );
   }
+
+
 
 }

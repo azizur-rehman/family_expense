@@ -99,7 +99,7 @@ class _OTPWidgetState extends State<OTPWidget> {
   void sendOTP(String phone)async {
     String testPhone = '+44 7123 123 456';
     // phone = testPhone;
-    phone = "+91$phone";
+    // phone = "+91$phone";
     Fluttertoast.showToast(msg: "Sending OTP to $phone");
 
     await FirebaseAuth.instance.verifyPhoneNumber(
@@ -188,9 +188,15 @@ class CreateUserWidget extends StatelessWidget {
 
                 FirebaseAuth.instance.currentUser.updateProfile(displayName: _nameController.text).then((value) => currentUser.reload());
 
-                UserData user = UserData(uid:uid, name: _nameController.text, createdAt: DateTime.now().millisecondsSinceEpoch, updatedOn: DateTime.now().millisecondsSinceEpoch);
+                UserData user = UserData(uid:uid, name: _nameController.text,
+                    phone: currentUser.phoneNumber,
+                    createdAt: DateTime.now().millisecondsSinceEpoch, updatedOn: DateTime.now().millisecondsSinceEpoch);
 
                 userRef.doc(uid).set(user.toJson()).then((value) {
+
+                  //update to family member
+                  familyMemberRef.doc(uid).update({'name' : _nameController.text});
+
                   Navigator.push(context, MaterialPageRoute(
                       builder: (context) => JoinOrCreateFamilyWidget()));
                   isInserting = false;

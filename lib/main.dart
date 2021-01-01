@@ -23,8 +23,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      darkTheme: ThemeData.dark(),
-      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark().copyWith(accentColor: Colors.lightBlueAccent),
+      theme: ThemeData.light().copyWith(accentColor: Colors.lightBlueAccent),
       // ui.home: LandingPage()
       home: LandingPage(),
     );

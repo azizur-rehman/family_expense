@@ -1,4 +1,5 @@
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
@@ -11,22 +12,27 @@ import 'package:fluttertoast/fluttertoast.dart';
 class AddItemDialogWidget extends StatelessWidget {
 
   final String familyId;
-  AddItemDialogWidget({Key key, this.familyId}):super(key:key);
+  final Item item;
+  AddItemDialogWidget({Key key, this.familyId, this.item}):super(key:key);
 
   @override
   Widget build(BuildContext context) {
 
     // String familyId = familyId;
     var query = familyMemberRef.where("uid", isEqualTo: uid).where("familyId", isEqualTo: familyId).where('verified', isEqualTo: true);
-
+    if(familyId == null || familyId.isEmpty){
+      Navigator.pop(context);
+      Fluttertoast.showToast(msg: 'You are not in a family yet');
+      return SizedBox();
+    }
 
 
     return Scaffold(
-      appBar: AppBar(title: Text('Add item'),),
+      appBar: AppBar(title: ralewayText('Add item'),),
       body: Column(
         children: [
 
-          FutureBuilder(
+          FutureBuilder<QuerySnapshot>(
               future: query.get(),
               builder: (context, snapshot){
 
@@ -36,7 +42,7 @@ class AddItemDialogWidget extends StatelessWidget {
                 if(!snapshot.hasData || snapshot.hasError)
                   return textMessage('You are not allowed to add items. Contact the moderator');
 
-                return _BodyWidget(familyId: familyId,);
+                return _BodyWidget(familyId: familyId, item: item,);
             }
           )
 
@@ -52,7 +58,8 @@ class _BodyWidget extends StatefulWidget {
 
 
   final String familyId ;
-  _BodyWidget({Key key, this.familyId}):super(key:key);
+  final Item item;
+  _BodyWidget({Key key, this.familyId, this.item}):super(key:key);
 
   @override
   __BodyWidgetState createState() => __BodyWidgetState();
@@ -66,10 +73,20 @@ class __BodyWidgetState extends State<_BodyWidget> {
 
   var purchaseDateInMillis = DateTime.now().millisecondsSinceEpoch;
 
+  @override
+  void initState() {
+
+    if(widget.item != null){
+      purchaseDateInMillis = widget.item.purchaseDate;
+      _nameController.text = widget.item.itemName;
+      _priceController.text = widget.item.itemPrice.toString();
+    }
+
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    String familyId = widget.familyId;
 
     return Container(
       child: Column(
@@ -180,44 +197,59 @@ class __BodyWidgetState extends State<_BodyWidget> {
 
               SizedBox(width: 20,),
 
-              MaterialButton(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                color: Colors.grey[200],
-                padding: EdgeInsets.only(left: 40, right: 40, top: 10, bottom: 10),
-                child: Text('Add Item', style: TextStyle().copyWith(fontSize: 22, color: Colors.black, fontWeight: FontWeight.w400),),
+              FutureBuilder(
+                future: getPrefValue(uid),
+                builder: (context, familyId) => MaterialButton(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  color: Colors.grey[200],
+                  padding: EdgeInsets.only(left: 40, right: 40, top: 10, bottom: 10),
+                  child: Text('Add Item', style: TextStyle().copyWith(fontSize: 22, color: Colors.black, fontWeight: FontWeight.w400),),
 
-                onPressed: (){
-                  if(isInserting)
-                    return;
+                  onPressed: ()async{
+                    if(isInserting)
+                      return;
 
-                  if(familyId.isEmpty){
-                    Navigator.popUntil(context, ModalRoute.withName('/'),);
+                    if(familyId == null){
+                      Navigator.popUntil(context, ModalRoute.withName('/'),);
 
-                    Navigator.push(context, MaterialPageRoute(builder: (builder)=>JoinOrCreateFamilyWidget()));
-                    Fluttertoast.showToast(msg: "You have not joined any family yet.");
-                  }
+                      Navigator.push(context, MaterialPageRoute(builder: (builder)=>JoinOrCreateFamilyWidget()));
+                      Fluttertoast.showToast(msg: "You have not joined any family yet.");
+                      return;
+                    }
 
-                  if(_nameController.text.isEmpty || _priceController.text.isEmpty){
-                    showSnackBar(context, "All fields required");
-                    return;
-                  }
+                    if(_nameController.text.isEmpty || _priceController.text.isEmpty){
+                      showSnackBar(context, "All fields required");
+                      return;
+                    }
 
-                  //insert item
-                  String itemId = "Item_${DateTime.now().millisecondsSinceEpoch}";
-                  var time = DateTime.now().millisecondsSinceEpoch;
+                    //insert item
+                    String itemId = widget.item == null ? "Item_${DateTime.now().millisecondsSinceEpoch}" : widget.item.itemId;
+                    var time = widget.item == null ? DateTime.now().millisecondsSinceEpoch : widget.item.addedOn;
 
-                  Item item = Item(itemId: itemId, familyId: familyId, addedOn: time, updatedOn: time,
-                      itemPrice: int.parse(_priceController.text) , addedBy: uid, purchaseDate: purchaseDateInMillis,itemName: _nameController.text);
+                    Item item = Item(itemId: itemId, familyId: familyId.data, addedOn: time, updatedOn: time,
+                        itemPrice: double.parse(_priceController.text) , addedBy: uid, purchaseDate: purchaseDateInMillis,itemName: _nameController.text);
 
-                  itemRef.doc(itemId).set(item.toJson())
-                      .then((value)  {
-                    showSnackBar(context, "Item Added");
-                    Navigator.of(context).pop();
+                    showProgressSnack(context, 'Adding Item');
+                    itemRef.doc(itemId).set(item.toJson())
+                        .then((value) async {
+                            hideSnackBar(context);
+                            showSnackBar(context, "Item Added");
+                            //update family expense amount
+                            Navigator.of(context).pop();
 
-                  });
+                            var expenseData = await familyExpenseRef.doc(familyId.data).get();
+                            if(expenseData.exists){
+                              familyExpenseRef.doc(familyId.data).update({ key_amount: ((expenseData.get(key_amount)) + item.itemPrice) , 'updatedAt': item.addedOn,
+                                'remaining': ((expenseData.get('remaining')) + item.itemPrice)  });
+                            }
+                            else{
+                              familyExpenseRef.doc(familyId.data).set({ key_amount:  item.itemPrice , 'updatedAt': item.addedOn, 'remaining': item.itemPrice });
+                            }
+                    });
 
-                },
+                  },
+                ),
               ),
             ],
           ),

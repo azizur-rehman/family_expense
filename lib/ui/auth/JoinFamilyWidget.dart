@@ -40,7 +40,7 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
                   child: Text('Create Family', style: TextStyle().copyWith(fontSize: 24, color: Colors.black, fontWeight: FontWeight.w400),),
 
                   onPressed: (){
-                    Navigator.push(context, MaterialPageRoute(builder: (builder)=> CreateFamilyWidget()));
+                    moveToPage(context, CreateFamilyWidget());
                   },
                 ),
 
@@ -210,7 +210,8 @@ class _CreateFamilyWidgetState extends State<CreateFamilyWidget> {
                     createdAt: DateTime.now().millisecondsSinceEpoch,
                     id: familyId,
                     createdBy: uid,
-                    updatedAt: DateTime.now().millisecondsSinceEpoch, name: _editingController.text);
+                    updatedAt: DateTime.now().millisecondsSinceEpoch,
+                    name: _editingController.text);
 
                 //insert family data
                 familyRef.doc(familyId).set(family.toJson())
@@ -220,7 +221,7 @@ class _CreateFamilyWidgetState extends State<CreateFamilyWidget> {
                   saveKey(uid, familyId);
 
                   //save current member as family member
-                  familyMemberRef.doc(uid).set(FamilyMember(
+                  familyMemberRef.doc(uid).set(FamilyMember(name: currentUser.displayName,
                     addedOn: DateTime.now().millisecondsSinceEpoch, moderator: true, verified: true, uid: uid, familyId: familyId
                   ).toJson());
 

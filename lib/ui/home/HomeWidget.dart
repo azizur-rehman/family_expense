@@ -1,13 +1,20 @@
 
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
+import 'package:family_expense/ui/auth/JoinFamilyWidget.dart';
 import 'file:///D:/Flutter/projects/FamilyExpense/family_expense/lib/ui/items/AddItemDialogWidget.dart';
 import 'package:family_expense/ui/family/FamilyWidget.dart';
+import 'package:family_expense/ui/family/sharing_percentage.dart';
+import 'package:family_expense/ui/home/AddPaymentWidget.dart';
 import 'package:family_expense/ui/items/ViewItemsWidget.dart';
+import 'package:family_expense/ui/messaging/messaging.dart';
+import 'package:family_expense/ui/notifications/notification_widget.dart';
 import 'package:family_expense/ui/profile/MyProfileWidget.dart';
+import 'package:family_expense/utils/MonthPicker.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:family_expense/data/Firebase.dart';
 import 'package:flutter/cupertino.dart';
@@ -16,6 +23,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+
+
+import 'package:family_expense/utils/extensions/Extensions.dart';
 
 class HomeWidget extends StatefulWidget {
   @override
@@ -27,11 +37,14 @@ class _HomeWidgetState extends State<HomeWidget> {
   GlobalKey<ScaffoldState> _scaffold = GlobalKey();
   var layoutIndex = 0;
   var familyId = "";
+  var isUserVerified = false;
 
 
   List<Widget> _homeWidgets = [
-    _dashboard, FamilyWidget(), MyProfileWidget()
+    _dashboard, FamilyWidget(), MessagingWidget(), MyProfileWidget()
   ];
+
+  List<String> _titles = ['Dashboard', 'My Family', 'Messages', 'My Profile'];
 
   @override
   Widget build(BuildContext context) {
@@ -40,26 +53,89 @@ class _HomeWidgetState extends State<HomeWidget> {
 
     return Scaffold(
       key: _scaffold,
+      // extendBody: true,
       // drawer: _drawer(),
-      bottomNavigationBar: _bottomNavigationBar(),
+      appBar: AppBar(title: Text(_titles[layoutIndex], style: GoogleFonts.raleway().copyWith(color: Theme.of(context).accentColor)), centerTitle: true,
+        backgroundColor: Colors.transparent, elevation: 0.0,
+        actions: [
+          IconButton(icon: Icon(Icons.notifications),
+          color:  getBlackWhiteColorWithTheme(context),
+            onPressed: ()=>moveToPage(context, NotificationWidget()),
+          )],),
+
+      bottomNavigationBar: _bottomBar(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       // appBar: _appBar(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showBottomAddItemDialog();
-        },
-        child: Icon(Icons.add),
+      floatingActionButton: Container(
+        height: 65.0,
+        width: 65.0,
+        child: FittedBox(
+          child: FloatingActionButton(
+            backgroundColor: Colors.blue,
+            // splashColor: Colors.white,
+            onPressed: () {
+              if(isUserVerified)
+                moveToPage(context, AddItemDialogWidget(familyId: familyId,));
+              else
+                showSnackBar(context, 'You can only add items as soon as you get verified');
+            } ,
+            child: Icon(Icons.add, color:Colors.white),
+          ),
+        ),
       ),
 
       body: SafeArea(
         child:  Container(
-          margin: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          child: _homeWidgets[layoutIndex]
+          margin: EdgeInsets.only(bottom: 16, left: 8, right: 8),
+          child: _mainWidget()
 
         ),
       ),
     );
   }
 
+
+  _mainWidget(){
+    if(layoutIndex == _homeWidgets.length - 2)
+      return _homeWidgets[layoutIndex];
+
+    return FutureBuilder(
+      future: getPrefValue(uid),
+      builder: (context, familyId){
+        if(familyId.hasData)
+          //check if family Id exists in a family
+          return FutureBuilder<QuerySnapshot>(
+              future: familyMemberRef.where('uid', isEqualTo: uid).where('familyId', isEqualTo:familyId.data).get(),
+              builder: (context, snapshot){
+                if(snapshot.connectionState == ConnectionState.waiting)
+                  return circularProgressBar;
+
+                if(!snapshot.hasData && snapshot.data.docs.isEmpty){
+                  return textMessage('You haven\'t joined any family yet');
+                }
+
+
+                if(snapshot.data.docs.first.get('verified') == false){
+                  isUserVerified = false;
+                  return getPlaceholderWidget('Please wait while someone verifies you...');
+
+                }
+
+                isUserVerified = true;
+                // print(snapshot.data.docs);
+                return _homeWidgets[layoutIndex];
+              },
+
+          );
+
+
+        if(!familyId.hasData || familyId.data.toString().isEmpty){
+          return getPlaceholderWidget('You haven\'t joined any family yet', onTap: () => moveToPage(context, JoinOrCreateFamilyWidget()));
+        }
+          return circularProgressBar;
+      },
+    );
+  }
 
   static Widget _dashboard =  SingleChildScrollView(
     child: FutureBuilder<SharedPreferences>(
@@ -77,8 +153,11 @@ class _HomeWidgetState extends State<HomeWidget> {
 
             SizedBox(height: 30,),
 
-           _DashboardChartWidget(),
+           _DashboardChartWidget(familyId: familyId,),
 
+            SizedBox(height: 20,),
+
+            _pieChartCard(familyId),
 
             SizedBox(height: 20,),
 
@@ -101,35 +180,38 @@ class _HomeWidgetState extends State<HomeWidget> {
                             return circularProgressBar;
                           }
 
-                          if(snapshot.hasError || !snapshot.hasData)
-                            return Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Text('No Items were added', style: Theme.of(context).textTheme.caption,),
-                            );
+                          if(snapshot.hasError || !snapshot.hasData || snapshot.data.size == 0)
+                            return getPlaceholderWidget('No Items here', height: 100);
+                            // return Padding(
+                            //   padding: const EdgeInsets.all(20.0),
+                            //   child: Text('No Items were added', style: Theme.of(context).textTheme.caption,),
+                            // );
 
-                          return ListView.builder(
-                            scrollDirection: Axis.vertical,
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            itemBuilder: (BuildContext context, int index) {
+                          return Column(
+                            children: [
+                              ListView.builder(
+                                scrollDirection: Axis.vertical,
+                                shrinkWrap: true,
+                                physics: NeverScrollableScrollPhysics(),
+                                itemBuilder: (BuildContext context, int index) {
 
-                              Item item = Item.fromJson(snapshot.data.docs[index].data());
+                                  Item item = Item.fromJson(snapshot.data.docs[index].data());
 
-                              return bindPurchaseListItem(context, item, index, true);
-                            },
-                            itemCount: snapshot.data.size,
+                                  return bindPurchaseListItem(context, item, index, true);
+                                },
+                                itemCount: snapshot.data.size,
 
+                              ),
+                              Divider(height: 1,color: Colors.grey,),
+
+                              ListTile(
+                                title: Text('See More'),
+                                trailing: Icon(Icons.arrow_right_alt_outlined, size: 36, ),
+                                onTap: ()=>Navigator.push(context, MaterialPageRoute(builder: (context)=>ViewItemsWidget(familyId: familyId))),
+                              )
+                            ],
                           );
                         },),
-
-
-                      Divider(height: 1,color: Colors.grey,),
-
-                      ListTile(
-                        title: Text('See More'),
-                        trailing: Icon(Icons.arrow_right_alt_outlined, size: 40, color: Colors.blue,),
-                        onTap: ()=>Navigator.push(context, MaterialPageRoute(builder: (context)=>ViewItemsWidget(familyId: familyId))),
-                      )
 
                     ],
                   ),
@@ -144,22 +226,203 @@ class _HomeWidgetState extends State<HomeWidget> {
     ),
   );
 
+  Widget _bottomBar(){
+    num sizeSelected = 32.0;
+    num sizeUnSelected = 28.0;
+
+    return BottomAppBar(
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      shape: CircularNotchedRectangle(),
+      notchMargin: 10,
+      // color: Colors.white,
+      child: Container(
+        height: 60.0,
+        child: Row(
+
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+          children: <Widget>[
+            IconButton(
+              iconSize: layoutIndex == 0? sizeSelected : sizeUnSelected,
+              padding: EdgeInsets.only(left: 28.0),
+              icon: Icon(Icons.dashboard_outlined),
+              color: layoutIndex == 0? Theme.of(context).accentColor : null,
+              onPressed: () => _onTapped(0),
+            ),
+
+            IconButton(
+              iconSize: layoutIndex == 1? sizeSelected : sizeUnSelected,
+              padding: EdgeInsets.only(right: 28.0),
+              color: layoutIndex == 1? Theme.of(context).accentColor : null,
+              icon: Icon(Icons.people_alt_outlined),
+              onPressed: () => _onTapped(1),
+            ),
+            IconButton(
+              iconSize: layoutIndex == 2? sizeSelected : sizeUnSelected,
+              padding: EdgeInsets.only(left: 28.0),
+              color: layoutIndex == 2? Theme.of(context).accentColor : null,
+              icon: Icon(Icons.message_outlined),
+              onPressed: () => _onTapped(2),
+            ),
+            IconButton(
+              iconSize: layoutIndex == 3? sizeSelected : sizeUnSelected,
+              color: layoutIndex == 3? Theme.of(context).accentColor : null,
+              padding: EdgeInsets.only(right: 28.0),
+              icon: Icon(Icons.person_outline_rounded),
+              onPressed:() => _onTapped(3),
+            )
+          ],
+        ),
+        // color: Colors.pinkAccent,
+      ),
+    );
+  }
+
+  static Widget _pieChartCard(String familyId){
+
+    return  Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        child: Column(
+          children: [
+            SizedBox(height: 20,),
+            ralewayText('Balance'),
+            StreamBuilder<DocumentSnapshot>(
+              stream: familyExpenseRef.doc(familyId).snapshots(),
+              builder:(context, snapshot){
+                if(snapshot.connectionState == ConnectionState.waiting)
+                  return circularProgressBar;
+
+                if(!snapshot.hasData || snapshot.hasError || !snapshot.data.exists)
+                  return getPlaceholderWidget('No Data here', height: 80);
+
+                num totalExpense = snapshot.data.exists ? snapshot.data.get(key_amount) : 0.0;
+                num totalBalance = snapshot.data.exists ? snapshot.data.get(key_remaining) : 0;
 
 
-   BottomNavigationBar _bottomNavigationBar(){
-     return BottomNavigationBar(
-       currentIndex: layoutIndex,
-       onTap: _onTapped,
-       items: [
-         BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Home'),
+                //now load members
+                return FutureBuilder<QuerySnapshot>(
+                  future: familyMemberRef.where(key_familyId, isEqualTo: familyId).where('verified', isEqualTo: true).get(),
+                  builder: (context, memberSnapshot){
 
-         BottomNavigationBarItem(icon: Icon(Icons.people_alt_outlined), label: 'Family'),
+                    if(memberSnapshot.connectionState == ConnectionState.waiting)
+                      return circularProgressBar;
 
-         BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Me')
 
-       ],
-     );
-   }
+                    if(!memberSnapshot.hasData || memberSnapshot.hasError)
+                      return ralewayText('No Data here');
+
+
+                    List<FamilyMember> memberList = memberSnapshot.data.docs.map((e) {
+                          return FamilyMember.fromJson(e.data());
+                    }).toList();
+
+                    //uids
+
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: familyPaymentsRef.where(key_familyId, isEqualTo: familyId)
+                          // .where('uid', whereIn: memberList.map((e) => e.uid).toList())
+                          .snapshots(),
+                      builder: (context, paymentSnapshot){
+
+
+                        if(paymentSnapshot.connectionState == ConnectionState.waiting)
+                          return circularProgressBar;
+
+                        // if(!snapshot.hasData || snapshot.hasError || !snapshot.data.exists)
+                        //   return getPlaceholderWidget('No Data here', height: 80);
+
+                        List<PaymentModel> payments = [];
+                        Map maxCollection = Map<String,num>();
+                        try{
+                          payments = paymentSnapshot.data.docs.map((e) => PaymentModel.fromJson(e.data())).toList();
+                        }catch(e){ }
+
+                        num allPaymentsCollected = 0.0;
+
+                        List<PieChartData> pieChartData = memberList.map((member) {
+                          num userPayment = 0.0;
+
+                          try{ userPayment = payments.where((e) => e.uid == member.uid).toList().sumBy((e) => e.amount);} catch(e){ }
+                          print('${member.name} -> $userPayment');
+                          num bal = ((totalExpense * (member.sharePercent/100)).roundToDouble()) - userPayment ;
+                          allPaymentsCollected += userPayment;
+
+                          maxCollection[member.uid] = bal;
+
+                          return PieChartData('${member.name.capitalize()}', bal, randomColor());
+                        }).toList() ;
+
+
+                        return Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Container(
+                                child: SfCircularChart(
+                                    margin: EdgeInsets.all(0),
+                                    tooltipBehavior: TooltipBehavior(enable: true, format: 'point.x : ${getCurrency()} point.y'),
+                                    // title: ChartTitle(text: 'Balance', textStyle: GoogleFonts.raleway()),
+                                    enableMultiSelection: true,
+                                    legend: Legend(isVisible: true, position: LegendPosition.bottom, orientation: LegendItemOrientation.horizontal),
+
+                                    series: <CircularSeries>[
+                                      // Renders doughnut chart
+                                      DoughnutSeries<PieChartData, String>(
+                                          enableTooltip: true,
+                                          dataSource: pieChartData,
+                                          pointColorMapper:(PieChartData data,  _) => data.color,
+                                          xValueMapper: (PieChartData data, _) => data.x,
+                                          yValueMapper: (PieChartData data, _) => data.y,
+                                          explode: true,
+                                          explodeIndex: 2
+                                        // cornerStyle: CornerStyle.startCurve,
+                                        // innerRadius: '50%',
+                                        // radius: '50%'
+                                      )
+                                    ]
+                                ),
+                                height: 200,
+                                // width: 240,
+                                margin: EdgeInsets.only(bottom: 15),
+                              ),
+
+                              ListTile(
+                                leading: ralewayText('Total Spent', fontSize: 15),
+                                trailing:  Text('${getCurrency()} ${totalExpense.roundToDouble()}', style: Theme.of(context).textTheme.headline5.copyWith(fontWeight: FontWeight.w300),),
+                              ),
+
+                              ListTile(
+                                leading: ralewayText('Unpaid'),
+                                trailing:  Text('${getCurrency()} ${totalExpense - allPaymentsCollected}', style: Theme.of(context).textTheme.headline5.copyWith(fontWeight: FontWeight.w300),),
+                              ),
+                              Divider(),
+
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Center(
+                                  child: OutlineButton.icon(
+                                    label: ralewayText('Add Payments', style: GoogleFonts.raleway().copyWith()),
+                                    onPressed: ()=>  memberList.any((e) => e.moderator && e.uid == uid) ? moveToPage(context, AddPaymentWidget(familyId: familyId, members: memberList, maxCollection: maxCollection,)) : showSnackBar(context, 'You are not authorized to edit sharing percentage'),
+                                    icon: Icon(Icons.addchart_rounded, ),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
+                                  ),
+                                ),
+                              ),
+
+
+                            ]
+                        );
+                      },
+                    );
+                  },
+                );
+
+              },
+            ),
+          ],
+        )
+    );
+  }
 
    void _onTapped(int index){
      setState(() {
@@ -167,15 +430,13 @@ class _HomeWidgetState extends State<HomeWidget> {
      });
    }
 
-
-   void showBottomAddItemDialog(){
-
-     Navigator.push(_scaffold.currentContext, MaterialPageRoute(builder: (context) => AddItemDialogWidget(familyId: familyId,)));
-
-   }
  }
 
  class _DashboardChartWidget extends StatefulWidget {
+
+  final String familyId;
+  _DashboardChartWidget({Key key, this.familyId}):super(key: key);
+
    @override
    __DashboardChartWidgetState createState() => __DashboardChartWidgetState();
  }
@@ -186,49 +447,49 @@ class _HomeWidgetState extends State<HomeWidget> {
      return  Column(
        children: [
 
-         GestureDetector(
-           child: Container(
-             margin: EdgeInsets.symmetric(horizontal: 10),
-             padding: EdgeInsets.symmetric(vertical: 6, horizontal: 20),
-             height: 40,
-             // width: double.infinity,
-             decoration: BoxDecoration(
-               borderRadius: BorderRadius.circular(25),
-               border: Border.all(
-                 color: Color(0xFFE5E5E5),
-               ),
-             ),
-             child:  GestureDetector(
-               child: Row(
-                 children: [
-                   Text(formattedDate(currentMillis), style: Theme.of(context).textTheme.subtitle1.copyWith(fontWeight: FontWeight.w300),),
-                   Icon(Icons.arrow_drop_down_sharp)
-                   // SvgPicture.asset("assets/icons/dropdown.svg")
-                   // SvgPicture.asset("assets/icons/dropdown.svg", height: 40,),
+         Row(
+           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+           children: [
+             textMessage('Showing Graph'),
+             DropdownButton<ChartType>(
+               underline: SizedBox(),
 
-                 ],
-               ),
-               onTap: ()async{
+               value: _chartCurrentType,
+               items: ChartType.values.map((e) => DropdownMenuItem(child: textMessage((e != ChartType.MONTHLY) ?_getChartTitle(e) : 'Monthly'), value: e,)).toList(),
+               onChanged: (ChartType type){
 
+                 if(type == ChartType.MONTHLY)
+                   showMonthPicker(
+                       context: context,
+                       firstDate: DateTime(DateTime.now().year - 5),
+                       lastDate: DateTime(DateTime.now().year ),
+                       initialDate: DateTime.now())
+                       .then((date) => date!= null && date.millisecondsSinceEpoch <= DateTime.now().millisecondsSinceEpoch ? setState(() {
 
-                 // setState(() {
-                   //show date picker
-                   // purchaseDateInMillis = picker.millisecondsSinceEpoch;
-                   // print(formattedDate(purchaseDateInMillis));
-
-                 // });
+                     _selectedDate = date;
+                     _chartCurrentType = type;
+                   }) : null);
+                 else
+                   setState(() {_chartCurrentType = type; });
                },
-             ),
-           ),
-           onTap: (){
-             //show date picker
-           },
+             )
+           ],
          ),
-         Card(
-           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-           child: Stack( children: [
-             _dashboardChart(startYearMillis, currentMillis,
-                 _getYearlyInterval(startYearMillis, currentMillis, currentMonth, currentYear))
+
+
+
+         Container(
+             // constraints: BoxConstraints.expand(width:1000, height:300),
+           // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+           child: Stack(
+               alignment: Alignment.topCenter,
+               overflow: Overflow.visible,
+               children: [
+             Positioned(
+                 // top: 10.0,
+                 // left: -5.0,
+                 // right: -5.0,
+                 child: _dashboardChart())
            ]
            )
          ),
@@ -238,19 +499,51 @@ class _HomeWidgetState extends State<HomeWidget> {
    }
 
 
-   var currentYear = DateTime.now().year;
-   var startYearMillis = DateFormat("dd-MM-yyyy").parse("01-01-${DateTime.now().year}").millisecondsSinceEpoch;
-   var currentMillis = DateTime.now().millisecondsSinceEpoch;
-   var currentMonth =  DateTime.now().month;
+   var _selectedDate = DateTime.now();
+   var _currentYear = DateTime.now().year;
+   var _startYearMillis = DateFormat("dd-MM-yyyy").parse("01-01-${DateTime.now().year}").millisecondsSinceEpoch;
+   var _currentMillis = DateTime.now().millisecondsSinceEpoch;
+   var _currentMonth =  DateTime.now().month;
 
-   var thisMonthMillis = DateFormat("dd-MM-yyyy").parse("01-${DateTime.now().month}-${DateTime.now().year}").millisecondsSinceEpoch;
+   int getStartMillisOfYear(int year) =>  DateFormat("dd-MM-yyyy").parse("01-01-$year").millisecondsSinceEpoch;
+   int getEndMillisOfYear(int year) =>  DateFormat("dd-MM-yyyy").parse("31-12-$year").millisecondsSinceEpoch + Duration.millisecondsPerDay;
 
-  Widget _dashboardChart(int start, int end, Map<int,int> intervals) {
+   var thisMonthStartMillis = DateFormat("dd-MM-yyyy").parse("01-${DateTime.now().month}-${DateTime.now().year}").millisecondsSinceEpoch;
+   ChartType _chartCurrentType = ChartType.THIS_MONTH;
 
-     print(intervals);
+  Widget _dashboardChart() {
 
+     var interval = _getYearlyInterval(_startYearMillis, _currentMillis, _currentMonth, _currentYear);
+
+
+     if(_chartCurrentType == ChartType.THIS_MONTH){
+       interval = _getMonthlyInterval(DateTime.now().month, DateTime.now().year);
+     }
+     else if(_chartCurrentType == ChartType.MONTHLY){
+       interval = _getMonthlyInterval(_selectedDate.month, _selectedDate.year);
+
+     }
+     else if(_chartCurrentType == ChartType.LAST_MONTH){
+      // start = milli
+       if(_currentMonth - 1 == 0)
+        interval = _getMonthlyInterval(12, _currentYear - 1);
+       else
+         interval = _getMonthlyInterval(_currentMonth - 1, _currentYear);
+
+     }
+     else if(_chartCurrentType == ChartType.LAST_YEAR){
+       interval = _getYearlyInterval(getStartMillisOfYear(_currentYear - 1), getEndMillisOfYear(_currentYear - 1), 12, _currentYear - 1);
+     }
+
+     print('${interval.keys.first} - ${interval.values.last}');
+     print('$_chartCurrentType , family id - ${widget.familyId}');
+     
      return FutureBuilder<QuerySnapshot>(
-       future: itemRef.orderBy('purchaseDate').where('purchaseDate', isGreaterThanOrEqualTo: start ).where('purchaseDate', isLessThanOrEqualTo: end).get(),
+       future: itemRef.orderBy('purchaseDate')
+           .where('purchaseDate', isGreaterThanOrEqualTo: interval.keys.first )
+           .where('purchaseDate', isLessThanOrEqualTo: interval.values.last)
+            .where(key_familyId, isEqualTo:widget.familyId)
+           .get(),
        builder: (context, snapshot){
 
          if(snapshot.connectionState == ConnectionState.waiting)
@@ -262,28 +555,44 @@ class _HomeWidgetState extends State<HomeWidget> {
          }
          var items = snapshot.data.docs.map((e) => Item.fromJson(e.data()));
 
-         //calculate month wise average in intervals
+         print('Item Prices = ${items.map((e) => e.itemPrice).toList()}');
+
+         //calculate month wise average in interval
          // var averagePerMonth = [];
          var totalPerMonth = [];
-         var format = 'MMM';
          List<SalesData> salesList = [];
+         var format = _chartCurrentType == ChartType.YEARLY ||  _chartCurrentType == ChartType.LAST_YEAR ? 'MMM' : 'dd MMM';
 
-         intervals.forEach((startMillis, endMillis) {
-           var count = 0;
-           var sum = items.map((e) => e.purchaseDate>=startMillis && e.purchaseDate <= endMillis ? e.itemPrice : 0).reduce((item1, item2) {
-             count++;
-             return item1 + item2;
+         // if(true){
+           //year wise graph
+           interval.forEach((startMillis, endMillis) {
+
+             num sum;
+             try {
+               sum = items.map((e) =>
+               e.purchaseDate >= startMillis && e.purchaseDate <= endMillis ? e
+                   .itemPrice : 0.0).reduce((item1, item2) {
+                 return item1.toDouble() + item2.toDouble();
+               });
+             }catch(e){ sum = 0.0; }
+
+             totalPerMonth.add(sum);
+             // var average = (sum/count).round();
+             // averagePerMonth.add(average);
+             salesList.add(SalesData(
+                 formatDateWithFormatter(startMillis, format),
+                 sum.roundToDouble()));
            });
-
-           totalPerMonth.add(sum);
-           // var average = (sum/count).round();
-           // averagePerMonth.add(average);
-           salesList.add(SalesData(formatDateWithFormatter(startMillis, format), sum.roundToDouble()));
-         });
+         // }
+         // else {
+         //   items.forEach((element) {salesList.add(SalesData(formatDateWithFormatter(element.purchaseDate, format),element.itemPrice.roundToDouble()));});
+         // }
          // print('Average List => $averagePerMonth');
          print('Total List => $totalPerMonth');
+         print('Total Sales => ${salesList.length}');
+         print('Sales => ${salesList.map((e) => e.month)}');
 
-         return plotGraph(salesList, 'This Year');
+         return plotGraph(salesList);
 
        },
       ) ;
@@ -291,19 +600,21 @@ class _HomeWidgetState extends State<HomeWidget> {
 
    }
 
-   Widget plotGraph(List<SalesData> salesList, String title){
+   Widget plotGraph(List<SalesData> salesList){
+
+    var title = _getChartTitle(_chartCurrentType);
 
      return SfCartesianChart(
          enableAxisAnimation: true,
          plotAreaBorderWidth: 0,
-         margin: EdgeInsets.only(top: 20, bottom: 10),
+         margin: EdgeInsets.only(top: 20, bottom: 10, left: 0),
          title: ChartTitle(text: title),
          tooltipBehavior: TooltipBehavior(
            enable: true,
          ),
-         primaryYAxis: NumericAxis(isVisible: false, labelFormat: '${getCurrency()} {value}' , rangePadding: ChartRangePadding.auto),
-         primaryXAxis: CategoryAxis(majorGridLines: MajorGridLines(width: 0,), minorTicksPerInterval:0,
-             majorTickLines: MajorTickLines(width:0)),
+         primaryYAxis: NumericAxis(isVisible: false, labelFormat: '${getCurrency()} {value}' , rangePadding: ChartRangePadding.normal),
+         primaryXAxis: CategoryAxis(majorGridLines: MajorGridLines(width: 0,), minorTicksPerInterval:0,tickPosition: TickPosition.outside,
+             majorTickLines: MajorTickLines(width:0, )),
 
          series: <ChartSeries>[
            // Renders spline chart
@@ -351,27 +662,42 @@ class _HomeWidgetState extends State<HomeWidget> {
    }
 
 
-   Map<int,int> _getThisMonth(int start, int end, int selectedMonth, int selectedYear){
-
+   Map<int,int> _getMonthlyInterval(  int selectedMonth, int selectedYear){
      List<int> millisStartOfMonth = [];
 
-     for(int i=1; i<=selectedMonth;i++){
-       var date = "01-$i-$selectedYear";
+     for(int i=1; i<=31;i++){
+       var date = "$i-$selectedMonth-$selectedYear";
        // print('Date => $date');
-       var millisOfMonth = DateFormat("dd-M-yyyy").parse(date).millisecondsSinceEpoch;
-       millisStartOfMonth.add(millisOfMonth);
+       try {
+         var millisOfMonth = DateFormat("d-M-yyyy")
+             .parse(date)
+             .millisecondsSinceEpoch;
+         millisStartOfMonth.add(millisOfMonth);
+       }
+       catch(e){ }
+       // print('Date => $date');
      }
 
      Map<int,int> intervals = Map();
-     for(int i=0; i<selectedMonth-1;i++){
+     for(int i=0; i<millisStartOfMonth.length-1;i++){
        intervals[millisStartOfMonth[i]] = millisStartOfMonth[i+1];
      }
      //intervals has upto last month
-     //add interval from last month to current millis, if both are same months
-     intervals[millisStartOfMonth.last] = end;
+     //finally add today's millis
+     intervals[intervals.values.last] = millisStartOfMonth.last + Duration.millisecondsPerDay ;
      return intervals;
    }
+
+   String _getChartTitle(ChartType type){
+     if(type == ChartType.YEARLY) return 'This year';
+     else if(type == ChartType.MONTHLY) return formatDateWithFormatter(_selectedDate.millisecondsSinceEpoch, "MMMM yyyy");
+     else if(type == ChartType.LAST_MONTH) return 'Last Month';
+     else if(type == ChartType.LAST_YEAR) return 'Last Year';
+     else return 'This month';
+   }
+
  }
+
 
 
 var _sampleList = [
@@ -390,6 +716,8 @@ var _sampleList = [
   SalesData('Dec', 40)
 ];
 
+
+
 class SalesData {
 
   SalesData(this.month, this.expense);
@@ -397,6 +725,14 @@ class SalesData {
   final double expense;
 }
 
+class PieChartData {
+  PieChartData(this.x, this.y, [this.color]);
+  final String x;
+  final double y;
+  final Color color;
+}
+
 enum ChartType{
-  YEARLY, MONTHLY
+  YEARLY, LAST_YEAR,  THIS_MONTH, LAST_MONTH, MONTHLY,
+
 }

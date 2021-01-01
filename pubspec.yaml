@@ -47,6 +47,12 @@ dependencies:
   grouped_list: ^3.7.1
   flutter_slidable: ^0.5.7
   confirm_dialog: ^0.1.1
+  flappy_search_bar: ^1.7.2
+  country_codes: ^1.0.3
+  flutter_xlider: ^3.4.0
+  flutter_chat_bubble: ^1.0.2
+#  barcode_scan: ^0.0.4
+#  qr_flutter: ^1.1.1
 #  flutter_cupertino_date_picker: ^1.0.26+2
 
 
