@@ -18,10 +18,13 @@ class MyProfileWidget extends StatefulWidget {
 class _MyProfileWidgetState extends State<MyProfileWidget> {
 
   TextEditingController _nameController = TextEditingController();
+  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
 
   @override
   void initState() {
-    _nameController.text = currentUser.displayName;
+    // FirebaseAuth.instance.currentUser.reload().then((value) =>
+    _nameController.text = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.displayName : null;
+    // );
 
     super.initState();
   }
@@ -142,12 +145,13 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
                           showSnackBar(context, 'Name cannot be empty');
                           return;
                         }
-                        // showProgressSnack(context, 'Updating your name');
+                        showProgressSnack(context, 'Updating your name');
 
                         FirebaseAuth.instance.currentUser.updateProfile(displayName: name).then((value) {
                           currentUser.reload();
                           print('Updating name to ${name} at ${userRef.doc(uid).path}, user = $currentUser');
                           userRef.doc(uid).update({'name': name}).then((value) {
+                            hideSnackBar(context);
                             showSnackBar(context, 'Your name has been updated');
                             //update to family member
                             familyMemberRef.doc(uid).update({'name' : name});
@@ -170,7 +174,7 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
               var confirmation = await showConfirmDialog(context, 'Are you sure you want to logout?');
               if(!confirmation) return;
 
-              FirebaseAuth.instance.signOut();
+              await FirebaseAuth.instance.signOut();
               //clear preferences
               getPref().then((value) => value.clear());
               Navigator.pushAndRemoveUntil(

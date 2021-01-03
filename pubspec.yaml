@@ -38,7 +38,6 @@ dependencies:
   firebase_analytics: ^5.0.2
   cloud_firestore: ^0.14.4
   flutter_svg: ^0.19.2+1
-  pin_entry_text_field: 0.1.4
   google_fonts: ^1.1.1
   fl_chart: ^0.12.1
   syncfusion_flutter_charts: ^18.4.30
@@ -51,6 +50,11 @@ dependencies:
   country_codes: ^1.0.3
   flutter_xlider: ^3.4.0
   flutter_chat_bubble: ^1.0.2
+  share: ^0.6.5+4
+  random_color: ^1.0.5
+  contacts_service: ^0.4.6
+  permission_handler: ^5.0.1+1
+  collection: ^1.14.13
 #  barcode_scan: ^0.0.4
 #  qr_flutter: ^1.1.1
 #  flutter_cupertino_date_picker: ^1.0.26+2

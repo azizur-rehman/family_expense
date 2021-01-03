@@ -43,7 +43,7 @@ class FamilyMember {
   String name = 'No Name';
 
 
-  FamilyMember({this.uid, this.moderator, this.verified, this.addedOn, this.familyId, this.paymentDone = 0.0, this.sharePercent, this.name = 'no name'});
+  FamilyMember({this.uid, this.moderator, this.verified, this.addedOn, this.familyId, this.paymentDone = 0.0, this.sharePercent = 0.0, this.name = 'no name'});
 
   FamilyMember.fromJson(Map<String, dynamic> json) {
     uid = json['uid'];
@@ -152,7 +152,7 @@ class NotificationData {
   String title, body, to, id;
   bool read = false;
 
-  NotificationData({this.from, this.createdAt, this.familyId, this.title, this.body, this.to, this.id, this.read = false});
+  NotificationData({this.from, this.createdAt, this.familyId, this.title, this.body = '', this.to, this.id, this.read = false});
 
   NotificationData.fromJson(Map<String, dynamic> json) {
     from = json['from'];

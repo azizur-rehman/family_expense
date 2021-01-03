@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:family_expense/utils/extensions/Extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share/share.dart';
 
 var rootRef = FirebaseFirestore.instance;
 var familyRef = rootRef.collection("family");
@@ -24,7 +25,10 @@ const String key_amount = 'amount', key_remaining = 'remaining';
 
 Widget loadName(String uid, TextStyle style){
   print('Loading name for - $uid');
-  if(currentUser.uid == uid)
+  if(uid == null)
+    return Text('No Name');
+
+  if(FirebaseAuth.instance.currentUser.uid == uid)
     return Text(currentUser.displayName.capitalize(), style: style,);
 
   return FutureBuilder(builder: (builder, snapshot){
@@ -33,11 +37,11 @@ Widget loadName(String uid, TextStyle style){
     if(snapshot.hasData && !snapshot.hasError) {
       try {
         var user = UserData.fromJson(snapshot.data.data());
-        return Text(user.name.capitalize(), style: style,);
+        return Text(user.name.capitalize(), style: style, textAlign: TextAlign.start,);
       }
       catch(e){
         print('err - $e');
-        return Text('No Name');
+        return Text('No Name', style: style, textAlign: TextAlign.start,);
       }
     }
     return Text('Loading...');
@@ -48,6 +52,10 @@ Widget loadName(String uid, TextStyle style){
 
 String getStringInitials(String text){
   print('Getting initials for -> $text');
+
+  if(text.split(' ').length == 1)
+    return text[0].toUpperCase();
+
   try { return text.split(' ').reduce((value, element) => '${value[0].toUpperCase()}${element[0]}').toUpperCase(); }
   catch(e){
     return text[0].toUpperCase();
@@ -94,7 +102,19 @@ FutureBuilder<DocumentSnapshot> loadFamilyCode(String familyId){
         children: [
           // QrImage(data: family.code, size: 320, gapless: false,),
           // textMessage('Or'),
-          Text(family.code, style: GoogleFonts.ubuntu().copyWith(color: Theme.of(builder).accentColor, fontSize: 36)),
+          Column(
+            children: [
+              Text(family.code, style: GoogleFonts.ubuntu().copyWith(color: Theme.of(builder).accentColor, fontSize: 36)),
+              SizedBox(height: 15,),
+
+              OutlineButton.icon(
+                label: ralewayText('Share Code', style: GoogleFonts.raleway().copyWith()),
+                onPressed: ()async=> await Share.share('Use the code - ${family.code} to join ${family.name}.\n\nDownload the android app - https://familyexpense.page.link/app'),
+                icon: Icon(Icons.share_outlined, ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
+              ),
+            ],
+          ),
         ],
       );
     }
@@ -102,3 +122,12 @@ FutureBuilder<DocumentSnapshot> loadFamilyCode(String familyId){
 
   }, future: familyRef.doc(familyId).get());
 }
+
+void reloadCurrentUser(){
+  try{
+    currentUser.reload();
+  }
+  catch(e){ }
+}
+
+

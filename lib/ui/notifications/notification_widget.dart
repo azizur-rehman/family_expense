@@ -91,20 +91,14 @@ class NotificationWidget extends StatelessWidget {
       itemBuilder: (BuildContext context, int index){
         NotificationData notification = list[index];
 
-        return Dismissible(
-          key: Key(notification.id),
-          onDismissed: (direction){
-            notificationRef.doc(notification.id).delete().then((value) => showSnackBar(context, 'Notification Removed'));
-          },
-          child: Card(
-            // color: notification.read == true ?  null : Colors.red[300]  ,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            child: ListTile(
-              leading: circleAvatar('${index+1}'),
-              title:  ralewayText(list[index].title, fontSize: 15),
-              // subtitle: ralewayText(list[index].body == null ? '' : list[index].body == null, fontSize: 13),
-              trailing: Text(formattedDate(list[index].createdAt), style: Theme.of(context).textTheme.caption.copyWith(fontSize: 12, ),),
-            ),
+        return Card(
+          // color: notification.read == true ?  null : Colors.red[300]  ,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: ListTile(
+            leading: circleAvatar('${index+1}'),
+            title:  ralewayText(list[index].title, fontSize: 15),
+            // subtitle: ralewayText(list[index].body == null ? '' : list[index].body == null, fontSize: 13),
+            trailing: Text(formattedDate(list[index].createdAt), style: Theme.of(context).textTheme.caption.copyWith(fontSize: 12, ),),
           ),
         );
       },

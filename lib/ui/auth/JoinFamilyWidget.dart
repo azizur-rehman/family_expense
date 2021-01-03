@@ -5,6 +5,7 @@ import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/ui/home/HomeWidget.dart';
 import 'package:family_expense/utils/Utils.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:random_string/random_string.dart';
@@ -17,6 +18,15 @@ class JoinOrCreateFamilyWidget extends StatefulWidget {
 class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
 
   TextEditingController _joinEditingController = TextEditingController();
+  String uid = FirebaseAuth.instance.currentUser.uid;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    FirebaseAuth.instance.currentUser.reload();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +110,7 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
                     }
                     else{
                       //add as a member
-                      familyMemberRef.doc(uid).set(FamilyMember(uid: uid, familyId: familyId, moderator: false, verified: false).toJson())
+                      familyMemberRef.doc(uid).set(FamilyMember(uid: uid, familyId: familyId, moderator: false, verified: false, name: currentUser.displayName).toJson())
                           .then((value) {
                         Fluttertoast.showToast(msg: 'Your family Request is being sent to the moderator');
                         //add notification
@@ -159,6 +169,7 @@ class _CreateFamilyWidgetState extends State<CreateFamilyWidget> {
   TextEditingController _editingController = TextEditingController();
 
   var isUpdating = false;
+  String uid = FirebaseAuth.instance.currentUser.uid;
 
   @override
   Widget build(BuildContext context) {
@@ -216,26 +227,37 @@ class _CreateFamilyWidgetState extends State<CreateFamilyWidget> {
                 //insert family data
                 familyRef.doc(familyId).set(family.toJson())
                     .then((value) {
-
-                      //store pref to local
+                  //store pref to local
                   saveKey(uid, familyId);
 
                   //save current member as family member
-                  familyMemberRef.doc(uid).set(FamilyMember(name: currentUser.displayName,
-                    addedOn: DateTime.now().millisecondsSinceEpoch, moderator: true, verified: true, uid: uid, familyId: familyId
-                  ).toJson());
+                  familyMemberRef.doc(uid).set(
+                      FamilyMember(name: currentUser.displayName,
+                          addedOn: DateTime
+                              .now()
+                              .millisecondsSinceEpoch,
+                          moderator: true,
+                          verified: true,
+                          uid: uid,
+                          familyId: familyId,
+                          sharePercent: 100.0
+                      ).toJson());
 
                   // Navigator.push(context, MaterialPageRoute(
                   //     builder: (builder)=>HomeWidget()
                   // ));
 
-                  Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => HomeWidget()
-                      ),
-                      ModalRoute.withName("/JoinFamilyWidget")
-                  );
+                  FirebaseAuth.instance.currentUser.reload().then((value) {
+                    print('reloaded after joining - $currentUser');
+                    Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => HomeWidget()
+                        ),
+                        ModalRoute.withName("/")
+                    );
+                  });
+
                 })
                 .catchError((onError) {
                   isUpdating = false;

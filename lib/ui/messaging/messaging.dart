@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
+import 'package:family_expense/ui/auth/JoinFamilyWidget.dart';
 import 'package:family_expense/utils/Utils.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_bubble/bubble_type.dart';
 import 'package:flutter_chat_bubble/chat_bubble.dart';
@@ -16,102 +18,116 @@ import 'package:google_fonts/google_fonts.dart';
 
 class MessagingWidget extends StatelessWidget {
 
-  final ScrollController _listController = ScrollController();
+  // final ScrollController _listController = ScrollController();
+  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+
 
   @override
   Widget build(BuildContext context) {
 
+    return FutureBuilder(
+      future: getPrefValue(uid),
+      builder: (context, familyId){
+
+
+        if(familyId.connectionState == ConnectionState.waiting)
+          return SizedBox();
+
+
+        if(!familyId.hasData || familyId.data.toString().isEmpty){
+          return getPlaceholderWidget('You haven\'t joined any family yet\nTap to Join', onTap: () => moveToPage(context, JoinOrCreateFamilyWidget()), svgAsset: 'people.svg');
+        }
+
+
+        return FutureBuilder<QuerySnapshot>(
+          future: familyMemberRef.where('uid', isEqualTo: uid).where(key_familyId, isEqualTo:familyId.data).get(),
+          builder: (context, snapshot){
+
+            if(snapshot.connectionState == ConnectionState.waiting)
+              return circularProgressBar;
+
+            if(!snapshot.hasData && snapshot.data.docs.isEmpty){
+              return getPlaceholderWidget('You haven\'t joined any family yet\nTap to Join', svgAsset: 'people.svg');
+            }
+
+
+            if(snapshot.data.docs.first.get('verified') == false){
+              return getPlaceholderWidget('Please wait while someone verifies you...');
+
+            }
+
+            return delayedWidget(1, _bindMessages(familyId.data));
+          },
+        );
+      },
+    );
+  }
+
+  Widget _bindMessages(String familyId){
     return Column(
       children: [
         Expanded(
-          child: FutureBuilder(
-            future: getPrefValue(uid),
-            builder: (context, familySnapshot){
+          child: StreamBuilder<QuerySnapshot>(
+            stream: messagingRef.where(key_familyId, isEqualTo: familyId).orderBy('timestamp', descending: true).snapshots(),
+            builder: (context, snapshot){
 
-              if(familySnapshot.connectionState == ConnectionState.waiting)
+              if(snapshot.connectionState == ConnectionState.waiting)
                 return circularProgressBar;
 
-              print(familySnapshot.error);
+              if(!snapshot.hasData || snapshot.hasError)
+                return getPlaceholderWidget('No Messages here',  svgAsset: "chats.svg", height: 120);
 
-              if(familySnapshot.hasData){
-                String familyId = familySnapshot.data.toString();
-                return StreamBuilder<QuerySnapshot>(
-                  stream: messagingRef.where(key_familyId, isEqualTo: familyId).orderBy('timestamp', descending: true).snapshots(),
-                  builder: (context, snapshot){
+              print(snapshot.data.docs);
+              print('----Binding Messages---');
+              List<MessageModel> messages = snapshot.data.docs.map((e) => MessageModel.fromJson(e.data())).toList();
 
-                    if(snapshot.connectionState == ConnectionState.waiting)
-                      return circularProgressBar;
+              return ListView.builder(
+                // controller: _listController,
+                  reverse: true,
+                  itemCount: messages.length,
+                  shrinkWrap: true,
+                  itemBuilder: (context, index){
+                    MessageModel message = messages[index];
+                    bool isMine = message.sentBy == uid ;
 
-                    if(!snapshot.hasData || snapshot.hasError)
-                      return _bindList([]);
-
-                    print(snapshot.data.docs);
-                    List<MessageModel> messages = snapshot.data.docs.map((e) => MessageModel.fromJson(e.data())).toList();
-
-                    return ListView.builder(
-                      controller: _listController,
-                        reverse: true,
-                        itemCount: messages.length,
-                        shrinkWrap: true,
-                        itemBuilder: (context, index){
-                        MessageModel message = messages[index];
-                        bool isMine = message.sentBy == uid ;
-
-                        return  Column(
-                          children: [
-                            ChatBubble(
-                              clipper: ChatBubbleClipper1(type: isMine ? BubbleType.sendBubble : BubbleType.receiverBubble),
-                              alignment: isMine ? Alignment.topRight : Alignment.topLeft,
-                              margin: EdgeInsets.only(top: 20),
-                              backGroundColor: isMine ? Colors.blue : Colors.grey[200],
-                              child: Container(
-                                constraints: BoxConstraints(
-                                  maxWidth: MediaQuery.of(context).size.width * 0.7,
-                                ),
-                                child: Text(message.message, style: GoogleFonts.raleway().copyWith(color: isMine ? Colors.white : Colors.black, fontSize: 18),),
-                              ),
+                    return  Column(
+                      children: [
+                        ChatBubble(
+                          clipper: ChatBubbleClipper1(type: isMine ? BubbleType.sendBubble : BubbleType.receiverBubble),
+                          alignment: isMine ? Alignment.topRight : Alignment.topLeft,
+                          margin: EdgeInsets.only(top: 2,),
+                          backGroundColor: isMine ? Colors.blue : Colors.grey[200],
+                          child: Container(
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.7,
                             ),
-                                SizedBox(height: 8),
-                                Container(alignment: isMine ? Alignment.topRight : Alignment.topLeft, child: Text(formatDateWithFormatter(message.timestamp, 'd MMM yy hh:mm a'), style: Theme.of(context).textTheme.caption.copyWith(fontSize: 9, ),))
+                            child: Column(
+                              children: [
+                                !isMine ? loadName(message.sentBy,  Theme.of(context).textTheme.caption.copyWith(color: Colors.redAccent,)) : SizedBox(),
+                                SizedBox(height: 1,),
+                                Text(message.message, style: GoogleFonts.raleway().copyWith(color: isMine ? Colors.white : Colors.black, fontSize: 16),),
+                              ],
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Container(alignment: isMine ? Alignment.topRight : Alignment.topLeft,
+                            child: Text(formatDateWithFormatter(message.timestamp, 'd MMM yy hh:mm a'), style: Theme.of(context).textTheme.caption.copyWith(fontSize: 9, ),),margin: EdgeInsets.only(left: 20, right: 20, bottom: 8 ),)
 
-                          ],
-                        );
+                      ],
+                    );
 
 
 
-                    });
-                  },
-                );
-
-              }
-              return _bindList([]);
-
-
+                  });
             },
           ),
         ),
 
-        Divider(height: 4),
-
-        _messageInputLayout(listController: _listController,)
+        Divider(height: 4), _messageInputLayout()
         //message input layout
       ],
-    );
-  }
-
-  Widget _bindList(List<NotificationData> list){
-
-    if(list.isEmpty)
-      return getPlaceholderWidget('No Messages here',  svgAsset: "chat.svg", height: 240);
-
-    return ListView.builder(
-      itemCount: list.length,
-      itemBuilder: (BuildContext context, int index){
-        return ListTile(
-          leading: ralewayText(list[index].title),
-          trailing: textMessage(formattedDate(list[index].createdAt)),
-        );
-      },
     );
   }
 
@@ -127,11 +143,11 @@ class _messageInputLayout extends StatefulWidget {
 }
 
 class __messageInputLayoutState extends State<_messageInputLayout> {
+  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
 
   String familyId ;
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     getPrefValue(uid).then((value) => familyId = value);
 
@@ -212,11 +228,18 @@ class __messageInputLayoutState extends State<_messageInputLayout> {
   }
 
   void onSendMessage(String text, int i, String familyId) {
-    widget.listController.animateTo(
-      0.0,
-      curve: Curves.easeOut,
-      duration: const Duration(milliseconds: 300),
-    );
+
+
+    // widget.listController.animateTo(
+    //   0.0,
+    //   curve: Curves.easeOut,
+    //   duration: const Duration(milliseconds: 300),
+    // );
+
+    if(text.isEmpty){
+      return;
+    }
+
     //send Message
     messagingRef.add(
       MessageModel(sentBy: uid, timestamp: DateTime.now().millisecondsSinceEpoch, message: text, type: 'message', familyId: familyId)

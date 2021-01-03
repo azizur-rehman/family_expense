@@ -1,6 +1,7 @@
 import 'package:avatar_glow/avatar_glow.dart';
 import 'package:family_expense/ui/auth/JoinFamilyWidget.dart';
 import 'package:family_expense/ui/auth/LoginMainWidget.dart';
+import 'package:family_expense/ui/auth/OTPWidget.dart';
 import 'package:family_expense/ui/home/HomeWidget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -35,17 +36,22 @@ class MyApp extends StatelessWidget {
 class LandingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-     return StreamBuilder<User>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, user)  {
-          print(user.data);
-          if(user.data != null){
-            return HomeWidget();
-          }
 
-          return LoginLandingPageWidget();
-        }
-    );
+          print('Current User ${currentUser}');
+
+    return currentUser == null ? LoginLandingPageWidget() : HomeWidget();
+
+    //  return StreamBuilder<User>(
+    //     stream: FirebaseAuth.instance.authStateChanges(),
+    //     builder: (context, user)  {
+    //       print('Current User ${user.data}');
+    //       if(user.data != null){
+    //         return HomeWidget();
+    //       }
+    //
+    //       return LoginLandingPageWidget();
+    //     }
+    // );
   }
 }
 

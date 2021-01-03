@@ -6,6 +6,7 @@ import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/ui/items/AddItemDialogWidget.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:family_expense/utils/extensions/Extensions.dart';
+import 'package:random_color/random_color.dart';
 
 String validateMobile(String value) {
   String pattern = r'(^(?:[+0]9)?[0-9]{10,12}$)';
@@ -45,25 +47,45 @@ Widget circularProgressBar = Center(child:Padding(padding: EdgeInsets.all(8), ch
 Widget textMessage(String message ) => Padding(padding: EdgeInsets.all(15), child: Text(message),);
 
 Widget ralewayText(String text, {double fontSize = 18, TextStyle style }) => Text(text.capitalize(), style: (style != null ? style : GoogleFonts.raleway()).copyWith(fontSize: fontSize),);
+Widget ralewayTextCentered(String text, {double fontSize = 18, TextStyle style }) => Text(text.capitalize(), style: (style != null ? style : GoogleFonts.raleway()).copyWith(fontSize: fontSize), textAlign: TextAlign.center,);
 
 
 Widget numberAvatar(int index) => circleAvatar((index+1).toString());
-Widget circleAvatar(String text) =>   CircleAvatar(child: Text(text.toUpperCase(),style: GoogleFonts.roboto().copyWith(color: Colors.white),), backgroundColor: Colors.blueAccent,);
+Widget circleAvatar(String text) =>   Container(
+  decoration:  BoxDecoration(
+      shape: BoxShape.circle,
+      gradient: LinearGradient(
+          colors: [
+           Color.fromRGBO(0, 198, 255, 1),
+            Color.fromRGBO(0, 114, 255, 1),
+          ],
+          begin: Alignment.bottomLeft,
+          end: Alignment.topRight
+      )
+  ),
+  child:   CircleAvatar(child: Text(text.toUpperCase(), style: GoogleFonts.roboto().copyWith(color: Colors.white),), backgroundColor: Colors.transparent,),
+);
 
 // Widget dateCircle(int millis) {
 //   String date = formattedDate(millis);
 // }
 
 Widget showProgressSnack(BuildContext context, String text){
+  hideSnackBar(context);
   SnackBar snackBar = SnackBar(
     // margin: EdgeInsets.all(10),
     duration: Duration(seconds: 30),
     backgroundColor: Colors.grey[700],
-    behavior: SnackBarBehavior.floating,
-    content:new Row(
+    // behavior: SnackBarBehavior.floating,
+    content:new Wrap(
+      alignment: WrapAlignment.center,
       children: <Widget>[
         circularProgressBar,
-        Text("  $text...", style: GoogleFonts.raleway().copyWith(color: Colors.white),)
+        SizedBox(height: 10,),
+        Padding(
+          padding: const EdgeInsets.only(top:8.0),
+          child: Text("  $text...", style: GoogleFonts.raleway().copyWith(color: Colors.white),),
+        )
       ],
     ),
   );
@@ -78,6 +100,8 @@ String formatDateWithFormatter(int millis, String format) => DateFormat(format).
 
 
 Widget bindPurchaseListItem(BuildContext context, Item item, int index, bool requireDate){
+  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+
   return Slidable(
     actionPane: SlidableDrawerActionPane(),
     actionExtentRatio: 0.12,
@@ -92,8 +116,18 @@ Widget bindPurchaseListItem(BuildContext context, Item item, int index, bool req
 
           showProgressSnack(context, 'Removing Item');
           itemRef.doc(item.itemId).delete()
-              .then((value) { ScaffoldMessenger.of(context).hideCurrentSnackBar(); showSnackBar(context, 'Item removed');})
-              .catchError( (onError) => ScaffoldMessenger.of(context).hideCurrentSnackBar());
+              .then((value) async{
+                //deduct amount from totals
+                hideSnackBar(context); showSnackBar(context, 'Item removed');
+
+                var expenseData = await familyExpenseRef.doc(item.familyId).get();
+                if(expenseData.exists){
+                  familyExpenseRef.doc(item.familyId).update({ key_amount: ((expenseData.get(key_amount)) - item.itemPrice) , 'updatedAt': item.addedOn,
+                    'remaining': ((expenseData.get('remaining')) - item.itemPrice)  });
+                }
+
+              })
+              .catchError( (onError) => hideSnackBar(context));
 
         },
       ),
@@ -147,12 +181,12 @@ var thisMonthStartMillis = DateFormat("dd-MM-yyyy").parse("01-${DateTime.now().m
 moveToPage(BuildContext context, Widget widget) => Navigator.push(context, MaterialPageRoute(builder: (builder) => widget));
 
 
-Widget getPlaceholderWidget(String text,  {String svgAsset, double height = 160.0, VoidCallback onTap,}){
+Widget getPlaceholderWidget(String text,  {String svgAsset, double height = 120.0, VoidCallback onTap, double messageFontSize = 16}){
 
   String path = "assets/icons";
 
   if(svgAsset == null)
-    svgAsset = "$path/login.svg";
+    svgAsset = "$path/wait.svg";
   else
     svgAsset = "$path/$svgAsset";
 
@@ -164,7 +198,7 @@ Widget getPlaceholderWidget(String text,  {String svgAsset, double height = 160.
         children: [
           SvgPicture.asset(svgAsset, height: height,),
           SizedBox(height: 30,),
-          Center(child: ralewayText(text)),
+          Center(child: ralewayTextCentered(text, fontSize: messageFontSize,)),
         ],
       ),
       onTap: onTap,
@@ -173,12 +207,19 @@ Widget getPlaceholderWidget(String text,  {String svgAsset, double height = 160.
 }
 
 Color randomColor(){
-  var colors = [Colors.red, Colors.blue, Colors.green, Colors.yellow, Colors.purple, Colors.deepOrange, Colors.cyanAccent];
+  var colors = [ColorHue.red, ColorHue.blue, ColorHue.green, ColorHue.yellow, ColorHue.purple, ColorHue.orange];
   colors.shuffle();
-  return colors[Random().nextInt(colors.length-1)];
+  // return colors[Random().nextInt(colors.length-1)];
+  return RandomColor().randomColor();
 }
 
 
 bool isDarkMode(BuildContext context) => MediaQuery.of(context).platformBrightness == Brightness.dark;
 
 Color getBlackWhiteColorWithTheme(BuildContext context) => isDarkMode(context) ? Colors.white : Colors.black;
+
+Widget delayedWidget(int durationInSeconds, Widget widget){
+  return FutureBuilder(future: Future.delayed(Duration(seconds: durationInSeconds),),
+      builder: (c,s) => s.connectionState == ConnectionState.done ? widget : circularProgressBar);
+
+}

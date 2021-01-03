@@ -5,11 +5,13 @@ import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/ui/auth/JoinFamilyWidget.dart';
 import 'package:family_expense/utils/Utils.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import 'package:family_expense/utils/extensions/Extensions.dart';
+import 'package:google_fonts/google_fonts.dart';
 class AddPaymentWidget extends StatelessWidget {
 
   final String familyId;
@@ -17,6 +19,7 @@ class AddPaymentWidget extends StatelessWidget {
 
   final Map maxCollection ;
   AddPaymentWidget({Key key, this.familyId, this.members, this.maxCollection}):super(key:key);
+  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
 
 
   @override
@@ -65,6 +68,7 @@ class _bodyContainer extends StatefulWidget {
 
   final String familyId;
   final List<FamilyMember> members;
+  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
 
   final Map maxCollection ;
   _bodyContainer({Key key, this.familyId, this.members, this.maxCollection}):super(key:key);
@@ -93,16 +97,18 @@ class __bodyContainerState extends State<_bodyContainer> {
 
             SizedBox(height: 20,),
 
-            ralewayText('Members'),
+            ralewayText('Select the Member'),
 
             SizedBox(height: 20,),
 
             Wrap(
+              alignment: WrapAlignment.spaceEvenly,
               children: List.generate(widget.members.length, (index) {
                 FamilyMember member = widget.members[index];
                 return Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: FilterChip(
+                  labelStyle: TextStyle(color: Colors.white),
                   // padding: EdgeInsets.symmetric(vertical: 5, horizontal: 15),
                   labelPadding: EdgeInsets.symmetric(vertical: 5, horizontal: 15),
                   label: ralewayText(member.name.toString().capitalize()),
@@ -159,7 +165,7 @@ class __bodyContainerState extends State<_bodyContainer> {
               children: [
 
                 FutureBuilder(
-                  future: getPrefValue(uid),
+                  future: getPrefValue(widget.uid),
                   builder: (context, familyId) => MaterialButton(
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),

@@ -2,11 +2,12 @@ import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/ui/auth/JoinFamilyWidget.dart';
+import 'package:family_expense/ui/auth/pin_view.dart';
+import 'package:family_expense/ui/home/HomeWidget.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pin_entry_text_field/pin_entry_text_field.dart';
 
 class OTPWidget extends StatefulWidget {
 
@@ -38,7 +39,8 @@ class _OTPWidgetState extends State<OTPWidget> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
 
-              Text('An Otp was sent to ${widget.phone}', style: Theme.of(context).textTheme.headline5.copyWith(fontWeight: FontWeight.w300),),
+
+              getPlaceholderWidget('An Otp was sent to ${widget.phone}', svgAsset: 'sms.svg', messageFontSize: 20),
 
               SizedBox(height: 80,),
 
@@ -76,12 +78,14 @@ class _OTPWidgetState extends State<OTPWidget> {
                     return;
                   }
 
-                  var result = verifyOTP(otp, verificationId);
-                  result.then((userCredential) {
+                   verifyOTP(otp, verificationId)
+                      .then((userCredential) {
                       //save user data
-                      Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => currentUser.displayName == null ? CreateUserWidget() : JoinOrCreateFamilyWidget()));
-
+                     print('Verified OTP , user - ${userCredential.user}');
+                     String name = userCredential.user.displayName;
+                     if(currentUser!=null)
+                     currentUser.reload().then((value) => moveToPage(context, CreateUserWidget(name: name,)));
+                     else moveToPage(context, CreateUserWidget(name: name,));
                   }
                   ).catchError((onError)=> Fluttertoast.showToast(msg: onError.toString()));
 
@@ -141,9 +145,19 @@ class CreateUserWidget extends StatelessWidget {
 
   TextEditingController _nameController = TextEditingController();
   var isInserting = false;
+  final String name;
+  CreateUserWidget({Key key, this.name}):super(key: key);
 
   @override
   Widget build(BuildContext context) {
+
+    try{
+      _nameController.text = name;
+    }
+    catch(e){
+
+    }
+
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -174,10 +188,9 @@ class CreateUserWidget extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               color: Colors.grey[200],
               padding: EdgeInsets.only(left: 40, right: 40, top: 10, bottom: 10),
-              child: Text('Create Family', style: TextStyle().copyWith(fontSize: 24, color: Colors.black, fontWeight: FontWeight.w400),),
+              child: Text('Proceed', style: TextStyle().copyWith(fontSize: 24, color: Colors.black, fontWeight: FontWeight.w400),),
 
-              onPressed: (){
-                //todo:insert to firebase
+              onPressed: ()async{
                 if(_nameController.text.isEmpty){
                   showSnackBar(context, "Name cannot be empty");
                       return;
@@ -186,21 +199,51 @@ class CreateUserWidget extends StatelessWidget {
                 if(isInserting)
                   return;
 
-                FirebaseAuth.instance.currentUser.updateProfile(displayName: _nameController.text).then((value) => currentUser.reload());
+                var currentUser = FirebaseAuth.instance.currentUser;
+                if(currentUser == null){
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(msg: 'Something went wrong');
+                }
+                String uid = currentUser.uid;
+
+                print(currentUser);
 
                 UserData user = UserData(uid:uid, name: _nameController.text,
                     phone: currentUser.phoneNumber,
                     createdAt: DateTime.now().millisecondsSinceEpoch, updatedOn: DateTime.now().millisecondsSinceEpoch);
 
-                userRef.doc(uid).set(user.toJson()).then((value) {
+                showProgressSnack(context, 'Updating...');
+                FirebaseAuth.instance.currentUser.updateProfile(displayName: _nameController.text)
+                    .then((value) {
+                  currentUser.reload();
 
-                  //update to family member
-                  familyMemberRef.doc(uid).update({'name' : _nameController.text});
+                  userRef.doc(uid).set(user.toJson()).then((value)async {
 
-                  Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => JoinOrCreateFamilyWidget()));
-                  isInserting = false;
+                    //update to family member
+                    familyMemberRef.doc(uid).update({'name' : _nameController.text});
+
+                    //now check if already in a family and verified
+
+                    var isAvailable = await familyMemberRef.doc(uid).get();
+                    if(isAvailable.exists){
+                      if(isAvailable.get('verified') == true) {
+                        //write to pref and then move
+                         saveKey(uid, isAvailable.get(key_familyId));
+                         hideSnackBar(context);
+                         await Future.delayed(Duration(seconds: 3)).then((value) => Navigator.pushAndRemoveUntil(
+                             context, MaterialPageRoute(builder: (context) => HomeWidget()), ModalRoute.withName("/")
+                         ));
+
+                        return;
+                      }
+                    }
+
+                    hideSnackBar(context);
+                    moveToPage(context, JoinOrCreateFamilyWidget());
+                    isInserting = false;
+                  });
                 });
+
 
               },
             ),

@@ -42,7 +42,7 @@ class _SharingPercentWidgetState extends State<SharingPercentWidget> {
     num averagePercent = (totalPercent/sharingPercent.length).roundToDouble();
 
     return Scaffold(
-      appBar: AppBar(title: Text('Adjust Sharing Percentage'),),
+      appBar: AppBar(title: ralewayText('Adjust Sharing Percentage'),),
       body: SingleChildScrollView(
         child: Container(
           margin: EdgeInsets.all(10),

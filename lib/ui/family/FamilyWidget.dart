@@ -6,10 +6,12 @@ import 'package:family_expense/ui/auth/JoinFamilyWidget.dart';
 import 'package:family_expense/ui/family/invite_family_member.dart';
 import 'package:family_expense/ui/family/sharing_percentage.dart';
 import 'package:family_expense/utils/Utils.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share/share.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:family_expense/utils/extensions/Extensions.dart';
@@ -23,6 +25,7 @@ class FamilyWidget extends StatefulWidget {
 class _FamilyWidgetState extends State<FamilyWidget> {
 
   var isAmModerator = false;
+  String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
 
   @override
   Widget build(BuildContext context) {
@@ -80,8 +83,8 @@ class _FamilyWidgetState extends State<FamilyWidget> {
 
                     SizedBox(height: 15,),
 
-                    FutureBuilder<QuerySnapshot>(
-                      future: itemRef.where('familyId', isEqualTo: familyId).get(),
+                    familyId != null ? FutureBuilder<QuerySnapshot>(
+                      future: itemRef.where(key_familyId, isEqualTo: familyId).where(key_familyId, isNotEqualTo: null).get(),
                       builder: (context, snapshot){
 
                         if(snapshot.hasError)
@@ -121,7 +124,7 @@ class _FamilyWidgetState extends State<FamilyWidget> {
 
                         );
 
-                      },),
+                      },) : getPlaceholderWidget('You need to be in a family to view',svgAsset: 'group.svg', height: 80),
 
 
 
@@ -165,11 +168,22 @@ class _FamilyWidgetState extends State<FamilyWidget> {
                         if(!snapshot.hasData)
                           return circularProgressBar;
 
-                        isAmModerator = FamilyMember.fromJson(snapshot.data.docs.firstWhere((element) => element.get("uid") == uid).data()).moderator;
 
+                        if(snapshot.data.docs.isEmpty || snapshot.data.size == 0)
+                          return getPlaceholderWidget('No members here to show', svgAsset: 'people.svg', height: 100);
 
-                        if(snapshot.data.docs.isEmpty)
-                          return textMessage('No members here to show');
+                        FamilyMember me;
+
+                        try {
+                          me = FamilyMember.fromJson(snapshot.data.docs.firstWhere((element) => element.get("uid") == uid).data());
+                          isAmModerator = me.moderator;
+                        }catch(e){
+                          return getPlaceholderWidget('No members here to show', svgAsset: 'people.svg', height: 100);
+                        }
+
+                        if(!me.verified)
+                          return getPlaceholderWidget('You need to be verified to view members', svgAsset: 'people.svg', height: 100);
+
                         List<FamilyMember> members = snapshot.data.docs.map((e) => FamilyMember.fromJson(e.data())).toList();
 
                         return Column(
@@ -189,14 +203,14 @@ class _FamilyWidgetState extends State<FamilyWidget> {
                                     IconSlideAction(
                                       caption: 'Remove',
                                       color: Colors.red,
-                                      iconWidget: Icon(Icons.delete),
+                                      iconWidget: Icon(Icons.delete, color: getBlackWhiteColorWithTheme(context),),
                                       onTap: () => _removeMember(member),
                                     ),
 
                                     IconSlideAction(
                                       caption: '${member.moderator ? 'Remove' : 'Make' } Moderator',
                                       color: Colors.green,
-                                      iconWidget: Icon(Icons.person_outline_rounded),
+                                      iconWidget: Icon(Icons.person_outline_rounded, color: getBlackWhiteColorWithTheme(context)),
                                       onTap: () async{
 
                                         if(isAmModerator) {
@@ -269,7 +283,7 @@ class _FamilyWidgetState extends State<FamilyWidget> {
                   SizedBox(height: 15,),
                   //family id
                   if(familyId != null) loadFamilyCode(familyId)
-                  else Padding(padding: const EdgeInsets.all(8.0), child: Text('Failed to load Family Code'),),
+                  else getPlaceholderWidget('Not joined any family yet', height: 80, svgAsset: 'people.svg', onTap: ()=>moveToPage(context, JoinOrCreateFamilyWidget())),
 
                   SizedBox(height: 8,)
 
@@ -286,16 +300,20 @@ class _FamilyWidgetState extends State<FamilyWidget> {
             if(confirm){
 
               showProgressSnack(context, 'Exiting the Family');
-              var otherMemberSnapshot = await familyMemberRef.where('familyId', isEqualTo: familyId).where('familyId', isNotEqualTo: uid).get();
+              var otherMemberSnapshot = await familyMemberRef.where('familyId', isEqualTo: familyId)//.where('uid', isNotEqualTo: uid)
+                  .get();
               //make someone admin then leave
               try{
-                var memberUID = otherMemberSnapshot.docs.first.get('uid').toString();
-                familyMemberRef.doc(memberUID).update({'moderator':true});
+                if(otherMemberSnapshot.docs.isNotEmpty) {
+                  FamilyMember me = FamilyMember.fromJson(otherMemberSnapshot.docs.where((e) => e.get('uid') == uid).first.data());
+                  var member = FamilyMember.fromJson( otherMemberSnapshot.docs.where((e) => e.get('uid') != uid).first.data());
+                  familyMemberRef.doc(member.uid).update({'moderator': true, 'sharePercent':member.sharePercent+me.sharePercent});
+                }
               }
               catch(err){
                 print(err);
-                showSnackBar(context, 'Failed to leave family : $err');
-                return;
+                // showSnackBar(context, 'Failed to leave family : $err');
+                // return;
               }
 
               familyMemberRef.doc(uid).delete()

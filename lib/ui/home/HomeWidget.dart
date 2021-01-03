@@ -8,6 +8,7 @@ import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/ui/auth/JoinFamilyWidget.dart';
 import 'file:///D:/Flutter/projects/FamilyExpense/family_expense/lib/ui/items/AddItemDialogWidget.dart';
 import 'package:family_expense/ui/family/FamilyWidget.dart';
+import 'package:family_expense/ui/family/payments_widget.dart';
 import 'package:family_expense/ui/family/sharing_percentage.dart';
 import 'package:family_expense/ui/home/AddPaymentWidget.dart';
 import 'package:family_expense/ui/items/ViewItemsWidget.dart';
@@ -17,6 +18,7 @@ import 'package:family_expense/ui/profile/MyProfileWidget.dart';
 import 'package:family_expense/utils/MonthPicker.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:family_expense/data/Firebase.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,14 +32,17 @@ import 'package:family_expense/utils/extensions/Extensions.dart';
 class HomeWidget extends StatefulWidget {
   @override
   _HomeWidgetState createState() => _HomeWidgetState();
+
 }
 
 class _HomeWidgetState extends State<HomeWidget> {
+
 
   GlobalKey<ScaffoldState> _scaffold = GlobalKey();
   var layoutIndex = 0;
   var familyId = "";
   var isUserVerified = false;
+  static final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
 
 
   List<Widget> _homeWidgets = [
@@ -45,6 +50,16 @@ class _HomeWidgetState extends State<HomeWidget> {
   ];
 
   List<String> _titles = ['Dashboard', 'My Family', 'Messages', 'My Profile'];
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      FirebaseAuth.instance.currentUser.reload().then((value) => print('Home - ${currentUser}'));
+      // print('User name')
+    }
+    catch(e){ }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,9 +109,9 @@ class _HomeWidgetState extends State<HomeWidget> {
     );
   }
 
-
   _mainWidget(){
-    if(layoutIndex == _homeWidgets.length - 2)
+    print('---Rendering main widget---');
+    if(layoutIndex > 1 )
       return _homeWidgets[layoutIndex];
 
     return FutureBuilder(
@@ -105,32 +120,33 @@ class _HomeWidgetState extends State<HomeWidget> {
         if(familyId.hasData)
           //check if family Id exists in a family
           return FutureBuilder<QuerySnapshot>(
-              future: familyMemberRef.where('uid', isEqualTo: uid).where('familyId', isEqualTo:familyId.data).get(),
+              future: familyMemberRef.where('uid', isEqualTo: uid).where(key_familyId, isEqualTo:familyId.data).get(),
               builder: (context, snapshot){
                 if(snapshot.connectionState == ConnectionState.waiting)
                   return circularProgressBar;
 
                 if(!snapshot.hasData && snapshot.data.docs.isEmpty){
-                  return textMessage('You haven\'t joined any family yet');
+                  return getPlaceholderWidget('You haven\'t joined any family yet\nTap to Join', svgAsset: 'people.svg');
                 }
 
 
                 if(snapshot.data.docs.first.get('verified') == false){
                   isUserVerified = false;
+                  print('User - ${FirebaseAuth.instance.currentUser}');
                   return getPlaceholderWidget('Please wait while someone verifies you...');
 
                 }
 
                 isUserVerified = true;
                 // print(snapshot.data.docs);
-                return _homeWidgets[layoutIndex];
+                  return delayedWidget(1, _homeWidgets[layoutIndex]);
               },
 
           );
 
 
         if(!familyId.hasData || familyId.data.toString().isEmpty){
-          return getPlaceholderWidget('You haven\'t joined any family yet', onTap: () => moveToPage(context, JoinOrCreateFamilyWidget()));
+          return getPlaceholderWidget('You haven\'t joined any family yet\nTap to Join', onTap: () => moveToPage(context, JoinOrCreateFamilyWidget()), svgAsset: 'people.svg');
         }
           return circularProgressBar;
       },
@@ -148,8 +164,8 @@ class _HomeWidgetState extends State<HomeWidget> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Hello ${currentUser.displayName}!',  style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.w300, fontSize: 20)),
-            Text('How are you?', style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.bold, fontSize: 20),),
+            Text('Hi, ${FirebaseAuth.instance.currentUser.displayName} 👋',  style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.w300, fontSize: 20)),
+            Text('Welcome back!', style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.bold, fontSize: 20),),
 
             SizedBox(height: 30,),
 
@@ -181,7 +197,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                           }
 
                           if(snapshot.hasError || !snapshot.hasData || snapshot.data.size == 0)
-                            return getPlaceholderWidget('No Items here', height: 100);
+                            return getPlaceholderWidget('No Items here', height: 80,  svgAsset: 'shopping-item.svg');
                             // return Padding(
                             //   padding: const EdgeInsets.all(20.0),
                             //   child: Text('No Items were added', style: Theme.of(context).textTheme.caption,),
@@ -294,7 +310,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                   return circularProgressBar;
 
                 if(!snapshot.hasData || snapshot.hasError || !snapshot.data.exists)
-                  return getPlaceholderWidget('No Data here', height: 80);
+                  return getPlaceholderWidget('No Data here', height: 80, svgAsset: 'pie-chart.svg');
 
                 num totalExpense = snapshot.data.exists ? snapshot.data.get(key_amount) : 0.0;
                 num totalBalance = snapshot.data.exists ? snapshot.data.get(key_remaining) : 0;
@@ -339,6 +355,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                         }catch(e){ }
 
                         num allPaymentsCollected = 0.0;
+                        num myBalance = 0.0;
 
                         List<PieChartData> pieChartData = memberList.map((member) {
                           num userPayment = 0.0;
@@ -363,18 +380,18 @@ class _HomeWidgetState extends State<HomeWidget> {
                                     tooltipBehavior: TooltipBehavior(enable: true, format: 'point.x : ${getCurrency()} point.y'),
                                     // title: ChartTitle(text: 'Balance', textStyle: GoogleFonts.raleway()),
                                     enableMultiSelection: true,
-                                    legend: Legend(isVisible: true, position: LegendPosition.bottom, orientation: LegendItemOrientation.horizontal),
+                                    legend: Legend(isVisible: true, position: LegendPosition.auto, orientation: LegendItemOrientation.auto),
 
                                     series: <CircularSeries>[
                                       // Renders doughnut chart
                                       DoughnutSeries<PieChartData, String>(
                                           enableTooltip: true,
                                           dataSource: pieChartData,
-                                          pointColorMapper:(PieChartData data,  _) => data.color,
+                                          // pointColorMapper:(PieChartData data,  _) => data.color,
                                           xValueMapper: (PieChartData data, _) => data.x,
                                           yValueMapper: (PieChartData data, _) => data.y,
                                           explode: true,
-                                          explodeIndex: 2
+                                          explodeAll: true
                                         // cornerStyle: CornerStyle.startCurve,
                                         // innerRadius: '50%',
                                         // radius: '50%'
@@ -383,29 +400,45 @@ class _HomeWidgetState extends State<HomeWidget> {
                                 ),
                                 height: 200,
                                 // width: 240,
-                                margin: EdgeInsets.only(bottom: 15),
+                                margin: EdgeInsets.only(bottom: 15, right: 4),
                               ),
 
                               ListTile(
-                                leading: ralewayText('Total Spent', fontSize: 15),
-                                trailing:  Text('${getCurrency()} ${totalExpense.roundToDouble()}', style: Theme.of(context).textTheme.headline5.copyWith(fontWeight: FontWeight.w300),),
+                                leading: ralewayText('Total Spent', fontSize: 13),
+                                trailing:  Text('${getCurrency()} ${totalExpense.roundToDouble()}', style: Theme.of(context).textTheme.headline6.copyWith(fontWeight: FontWeight.w300),),
                               ),
 
                               ListTile(
-                                leading: ralewayText('Unpaid'),
-                                trailing:  Text('${getCurrency()} ${totalExpense - allPaymentsCollected}', style: Theme.of(context).textTheme.headline5.copyWith(fontWeight: FontWeight.w300),),
+                                leading: ralewayText('Unpaid', fontSize: 13),
+                                trailing:  Text('${getCurrency()} ${totalExpense - allPaymentsCollected}', style: Theme.of(context).textTheme.headline6.copyWith(fontWeight: FontWeight.w300),),
                               ),
+
+                              memberList.any((e) => e.uid == uid && e.sharePercent > 0.0) ?
+                              ListTile(
+                                leading: ralewayText('My Balance',),
+                                trailing:  Text('${getCurrency()} ${maxCollection[uid]}', style: Theme.of(context).textTheme.headline5.copyWith(fontWeight: FontWeight.w300),),
+                              ) : SizedBox(),
+
                               Divider(),
 
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Center(
-                                  child: OutlineButton.icon(
-                                    label: ralewayText('Add Payments', style: GoogleFonts.raleway().copyWith()),
-                                    onPressed: ()=>  memberList.any((e) => e.moderator && e.uid == uid) ? moveToPage(context, AddPaymentWidget(familyId: familyId, members: memberList, maxCollection: maxCollection,)) : showSnackBar(context, 'You are not authorized to edit sharing percentage'),
-                                    icon: Icon(Icons.addchart_rounded, ),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
-                                  ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    OutlineButton.icon(
+                                      label: ralewayText('Add Payments', fontSize: 14),
+                                      onPressed: ()=>  memberList.any((e) => e.moderator && e.uid == uid) ? moveToPage(context, AddPaymentWidget(familyId: familyId, members: memberList, maxCollection: maxCollection,)) : showSnackBar(context, 'You are not authorized to add payments'),
+                                      icon: Icon(Icons.addchart_rounded, ),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
+                                    ),
+                                    OutlineButton.icon(
+                                      label: ralewayText('View Payments', fontSize: 14),
+                                      onPressed: ()=>  memberList.any((e) => e.moderator && e.uid == uid) ? moveToPage(context, PaymentsWidget()) : showSnackBar(context, 'You are not authorized to view payments'),
+                                      icon: Icon(Icons.payments_outlined, ),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
+                                    ),
+                                  ],
                                 ),
                               ),
 
@@ -429,6 +462,7 @@ class _HomeWidgetState extends State<HomeWidget> {
        layoutIndex = index;
      });
    }
+
 
  }
 
@@ -603,36 +637,53 @@ class _HomeWidgetState extends State<HomeWidget> {
    Widget plotGraph(List<SalesData> salesList){
 
     var title = _getChartTitle(_chartCurrentType);
+    // var tempList = salesList;
+    // tempList.sort((a,b)=>a.expense.compareTo(b.expense));
+    // var max = tempList.last.expense;
+    // var min = tempList.first.expense;
+    //
+    // print('max - $max - $min');
 
      return SfCartesianChart(
          enableAxisAnimation: true,
          plotAreaBorderWidth: 0,
+         zoomPanBehavior: ZoomPanBehavior(
+           enablePanning: true,
+         ),
          margin: EdgeInsets.only(top: 20, bottom: 10, left: 0),
-         title: ChartTitle(text: title),
+         title: ChartTitle(text: title, textStyle: GoogleFonts.raleway()),
          tooltipBehavior: TooltipBehavior(
            enable: true,
          ),
-         primaryYAxis: NumericAxis(isVisible: false, labelFormat: '${getCurrency()} {value}' , rangePadding: ChartRangePadding.normal),
-         primaryXAxis: CategoryAxis(majorGridLines: MajorGridLines(width: 0,), minorTicksPerInterval:0,tickPosition: TickPosition.outside,
-             majorTickLines: MajorTickLines(width:0, )),
+         primaryYAxis: NumericAxis(isVisible: false, labelFormat: '${getCurrency()} {value}' ,
+             // visibleMaximum: max,
+             // visibleMinimum: min,
+             rangePadding: ChartRangePadding.normal),
+         primaryXAxis: CategoryAxis(
+           majorGridLines: MajorGridLines(width: 0,), minorTicksPerInterval:0,tickPosition: TickPosition.outside,
+             majorTickLines: MajorTickLines(width:0, ), interval: 1
+
+         ),
 
          series: <ChartSeries>[
            // Renders spline chart
            SplineAreaSeries<SalesData, String>(
              // color: Colors.blue,
                enableTooltip: true,
+               opacity: isDarkMode(context) ? 0.4 : 0.8,
                name: 'Expenses',
                gradient: LinearGradient(
                  // begin: Alignment.topLeft,
                  // end: Alignment(0.8, 0.0), // 10% of the width, so there are ten blinds.
                  colors: [
-                   hexToColor("#00c6ff"),
-                   hexToColor("#0072ff"),
+                   Color.fromRGBO(0, 198, 255, 1),
+                   Color.fromRGBO(0, 114, 255, 1),
+                   // Color.fromRGBO(0, 114, 255, 1),
                  ], // red to yellow// repeats the gradient over the canvas
                ),
                borderWidth: 2,
                borderColor: Colors.blue,
-               dataSource: salesList,
+               dataSource:  salesList,
                yValueMapper: (SalesData sales, _) => sales.expense,
                xValueMapper: (SalesData sales, num index) => sales.month
            )

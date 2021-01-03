@@ -1,8 +1,12 @@
 
+import 'dart:collection';
+
+import 'package:contacts_service/contacts_service.dart';
 import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/utils/Utils.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flappy_search_bar/flappy_search_bar.dart';
 import 'package:flappy_search_bar/search_bar_style.dart';
 import 'package:flutter/cupertino.dart';
@@ -10,10 +14,13 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:family_expense/utils/extensions/Extensions.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class InviteMemberWidget  extends StatelessWidget {
 
   final SearchBarController _searchBarController = SearchBarController();
+
+  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
 
   Future<List<UserData>> _getUsers(String text) async {
     // await Future.delayed(Duration(seconds: text.length == 4 ? 10 : 1));
@@ -39,56 +46,123 @@ class InviteMemberWidget  extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: SearchBar<UserData>(
-          searchBarPadding: EdgeInsets.symmetric(horizontal: 15),
-          searchBarStyle: SearchBarStyle(borderRadius: BorderRadius.circular(30), padding: EdgeInsets.only(left: 10)),
-          headerPadding: EdgeInsets.symmetric(horizontal: 10),
-          listPadding: EdgeInsets.symmetric(horizontal: 10),
-          textStyle: GoogleFonts.roboto().copyWith(fontSize: 20),
-          onSearch: _getUsers,
-          placeHolder: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ralewayText("Search Phone Numbers"),
-          ),
-          cancellationWidget: Text("Cancel"),
-          emptyWidget: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ralewayText('No Users Found'),
-          ),
-          onError: (err){
-            return textMessage('Error occurred ${err.stackTrace.toString()}');
-          },
+        child: FutureBuilder<bool>(
+          future: Permission.contacts.isGranted,
+          builder: (context, isGranted){
 
-          // mainAxisSpacing: 10,
-          // crossAxisSpacing: 10,
-          // crossAxisCount: 2,
-          onItemFound: (UserData user, int index) {
-            return Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              child: ListTile(
-                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                // leading: numberAvatar(index),
-                leading: Text(user.name.capitalize(), style: GoogleFonts.raleway().copyWith(fontSize: 18),),
-                trailing: Container(
-                  margin: EdgeInsets.all(5),
-                  child: FittedBox(
-                    child: OutlineButton(
-                      disabledBorderColor: Theme.of(context).accentColor,
-                      color: Theme.of(context).accentColor,
-                      textColor: Theme.of(context).accentColor,
-                      onPressed: ()=>_inviteUser(context, user),
-                      child: Row(children: [ralewayText('Invite'), SizedBox(width: 8,),
-                        Icon(Icons.person_add_alt_1_outlined)],),
-                        shape: new RoundedRectangleBorder(borderRadius: new BorderRadius.circular(20.0))
-                    ),
-                  ),
-                ),
-              ),
-            );
+            if(isGranted.hasData){
+
+              if(!isGranted.data){
+                return FutureBuilder<PermissionStatus>(
+                  future: Permission.contacts.request(),
+                  builder: (context, status){
+
+                    if(status.connectionState == ConnectionState.done)
+                      return _searchWidget(context, status.data.isGranted);
+
+                    return circularProgressBar;
+                  },
+                );
+              }
+
+              return _searchWidget(context, isGranted.data);
+            }
+
+
+            return circularProgressBar;
           },
         ),
       ),
     );
+
+  }
+
+  Map<String, String> phoneContacts = Map();
+  Widget _searchWidget(BuildContext context, bool hasContactPermission){
+
+    //bind contact list if has permission
+    if(hasContactPermission){
+      ContactsService.getContacts().then((value) {
+        // phoneContacts = Map.fromIterable(value.toList(), key: (e) => e['label'], value: (e) => e['phone']);
+        value.forEach((e) {
+          // phoneContacts[element.phones.map((e) => e.value)] = element.phones.first.value;
+          phoneContacts[e.displayName] = e.phones.map((e) => e.value).toList().join("|");
+        });
+        print(phoneContacts);
+      }
+      );
+    }
+
+    return SearchBar<UserData>(
+      searchBarPadding: EdgeInsets.symmetric(horizontal: 15),
+      searchBarStyle: SearchBarStyle(borderRadius: BorderRadius.circular(30), padding: EdgeInsets.only(left: 10)),
+      headerPadding: EdgeInsets.symmetric(horizontal: 10),
+      listPadding: EdgeInsets.symmetric(horizontal: 10),
+      textStyle: GoogleFonts.roboto().copyWith(fontSize: 20),
+      onSearch: _getUsers,
+      placeHolder: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ralewayText("Search Phone Numbers"),
+      ),
+      cancellationWidget: Text("Cancel"),
+      emptyWidget: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ralewayText('No Users Found'),
+      ),
+      onError: (err){
+        return textMessage('Error occurred ${err.stackTrace.toString()}');
+      },
+
+      // mainAxisSpacing: 10,
+      // crossAxisSpacing: 10,
+      // crossAxisCount: 2,
+      onItemFound: (UserData user, int index) {
+        return Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: ListTile(
+            contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+            // leading: numberAvatar(index),
+            title: Text(user.name.capitalize(), style: GoogleFonts.raleway().copyWith(fontSize: 16),),
+            leading: circleAvatar(getStringInitials(user.name)),
+            trailing: Container(
+              margin: EdgeInsets.all(5),
+              child: FittedBox(
+                child: OutlineButton(
+                    disabledBorderColor: Theme.of(context).accentColor,
+                    color: Theme.of(context).accentColor,
+                    textColor: getBlackWhiteColorWithTheme(context),
+                    onPressed: ()=>_inviteUser(context, user),
+                    child: Row(
+                      children: [ralewayText('Invite', fontSize: 15), SizedBox(width: 8,),
+                      Icon(Icons.person_add_alt_1_outlined, color: getBlackWhiteColorWithTheme(context),)],),
+                    shape: new RoundedRectangleBorder(borderRadius: new BorderRadius.circular(20.0))
+                ),
+              ),
+            ),
+
+            subtitle:  hasContactPermission ? _findPhone(context, user.phone,) : SizedBox(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _findPhone(BuildContext context, String phone){
+
+    phone = phone.replaceAll(currentDialCode, '');
+    Widget widget = ralewayText('Not in contact', fontSize: 10,);
+
+    phoneContacts.forEach((key, value) {
+
+      if(value.contains(phone))
+        {
+          widget = ralewayText('In your contact with name $key', fontSize: 10,);
+          return;
+        }
+
+    });
+
+    return widget;
 
   }
 

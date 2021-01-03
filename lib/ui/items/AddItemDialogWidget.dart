@@ -18,6 +18,8 @@ class AddItemDialogWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
+
+
     // String familyId = familyId;
     var query = familyMemberRef.where("uid", isEqualTo: uid).where("familyId", isEqualTo: familyId).where('verified', isEqualTo: true);
     if(familyId == null || familyId.isEmpty){
@@ -36,13 +38,25 @@ class AddItemDialogWidget extends StatelessWidget {
               future: query.get(),
               builder: (context, snapshot){
 
+
                 if(snapshot.connectionState == ConnectionState.waiting)
                   return Center( child: circularProgressBar);
 
                 if(!snapshot.hasData || snapshot.hasError)
-                  return textMessage('You are not allowed to add items. Contact the moderator');
+                  return getPlaceholderWidget('You are not allowed to add items. Contact the moderator');
 
-                return _BodyWidget(familyId: familyId, item: item,);
+                return FutureBuilder<QuerySnapshot>(
+                  future: itemRef.orderBy('purchaseDate', descending: true).where(key_familyId, isEqualTo: familyId).get(),
+                  builder: (context, itemSnapshot){
+
+                    if(itemSnapshot.hasData){
+                      List<Item> items = itemSnapshot.data.docs.map((e) => Item.fromJson(e.data())).toList();
+                      return _BodyWidget(familyId: familyId, item: item, frequentItems: items,);
+                    }
+
+                    return _BodyWidget(familyId: familyId, item: item, frequentItems: [],);
+                  },
+                );
             }
           )
 
@@ -59,7 +73,8 @@ class _BodyWidget extends StatefulWidget {
 
   final String familyId ;
   final Item item;
-  _BodyWidget({Key key, this.familyId, this.item}):super(key:key);
+  List<Item> frequentItems = [];
+  _BodyWidget({Key key, this.familyId, this.item, this.frequentItems}):super(key:key);
 
   @override
   __BodyWidgetState createState() => __BodyWidgetState();
@@ -73,6 +88,10 @@ class __BodyWidgetState extends State<_BodyWidget> {
 
   var purchaseDateInMillis = DateTime.now().millisecondsSinceEpoch;
 
+  int selectedFrequentItem = -1;
+
+  // List<Item> frequentItemList = List.empty();
+
   @override
   void initState() {
 
@@ -82,15 +101,79 @@ class __BodyWidgetState extends State<_BodyWidget> {
       _priceController.text = widget.item.itemPrice.toString();
     }
 
+
+    if(widget.frequentItems.isNotEmpty){
+      // frequentItemList = widget.frequentItems;
+      //
+      // final map2 = <String, int>{};
+      // for (final m in widget.frequentItems) {
+      //   final name = m.itemName;
+      //   map2[name] = map2.containsKey(name) ? map2[name] + 1 : 1;
+      // }
+      //
+      // var frequentItems = map2.keys.toList(growable: false);
+      // frequentItems.sort((k1, k2) => map2[k2].compareTo(map2[k1]));
+
+      widget.frequentItems.sort((e1, e2)=> e1.itemName.compareTo(e2.itemName));
+      print('before - ${widget.frequentItems}');
+      widget.frequentItems = widget.frequentItems.toSet().toList();
+      print('after - ${widget.frequentItems}');
+
+
+    }
+
+
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
 
+
+    if(selectedFrequentItem != -1){
+      Item item = widget.frequentItems[selectedFrequentItem];
+      _nameController.text = item.itemName;
+      _priceController.text =  item.itemPrice.toString();
+
+    }
+
+
     return Container(
       child: Column(
         children: [
+
+          widget.frequentItems.isNotEmpty ? Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ralewayText('Frequent Items'),
+          ) : SizedBox(),
+
+          Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            children: List.generate(widget.frequentItems.take(7).length, (index) {
+              Item item = widget.frequentItems[index];
+              return Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: ChoiceChip(
+                  labelStyle: TextStyle(color: Colors.white, fontSize: 12),
+                  // padding: EdgeInsets.symmetric(vertical: 5, horizontal: 15),
+                  labelPadding: EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+                  label: ralewayText(item.itemName.toString(), fontSize: 14),
+                  // labelStyle: TextStyle(color: Colors.white),
+                  selected: selectedFrequentItem == index,
+                  selectedColor: Colors.lightBlue,
+                  // avatar: circleAvatar(getStringInitials(member.name)),
+                  onSelected: (bool selected) {
+                    setState(() {
+                      selectedFrequentItem = selected ? index : -1;
+                      print('selected - $selectedFrequentItem');
+                    });
+
+                  },
+                ),
+              );
+            }),
+          ),
+
           SizedBox(height: 20,),
 
           Padding(
