@@ -197,9 +197,13 @@ class _LoginLandingPageWidgetState extends State<LoginLandingPageWidget> with Si
 
     // saveKey(key_user, "some text");
 
-    Navigator.push(context, MaterialPageRoute(
-      builder: (context) => LoginMainWidget(),
-    ));
+    // Navigatpushor.push(context, MaterialPageRoute(
+    //   builder: (context) => LoginMainWidget(),
+    // ));
+    Navigator.pushAndRemoveUntil(
+        context, MaterialPageRoute(builder: (context) => LoginMainWidget()),
+        ModalRoute.withName("/LandingPageWidget")
+    );
   }
 }
 

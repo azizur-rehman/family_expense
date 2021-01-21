@@ -1,4 +1,6 @@
 
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
@@ -8,6 +10,9 @@ import 'package:family_expense/utils/Utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:intl/locale.dart';
+import 'package:speech_to_text/speech_recognition_error.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 class AddItemDialogWidget extends StatelessWidget {
 
@@ -51,10 +56,10 @@ class AddItemDialogWidget extends StatelessWidget {
 
                     if(itemSnapshot.hasData){
                       List<Item> items = itemSnapshot.data.docs.map((e) => Item.fromJson(e.data())).toList();
-                      return _BodyWidget(familyId: familyId, item: item, frequentItems: items,);
+                      return _BodyWidget(familyId: familyId, item: item, lastPurchasedItems: items,);
                     }
 
-                    return _BodyWidget(familyId: familyId, item: item, frequentItems: [],);
+                    return _BodyWidget(familyId: familyId, item: item, lastPurchasedItems: [],);
                   },
                 );
             }
@@ -73,8 +78,8 @@ class _BodyWidget extends StatefulWidget {
 
   final String familyId ;
   final Item item;
-  List<Item> frequentItems = [];
-  _BodyWidget({Key key, this.familyId, this.item, this.frequentItems}):super(key:key);
+  List<Item> lastPurchasedItems = [];
+  _BodyWidget({Key key, this.familyId, this.item, this.lastPurchasedItems}):super(key:key);
 
   @override
   __BodyWidgetState createState() => __BodyWidgetState();
@@ -87,13 +92,36 @@ class __BodyWidgetState extends State<_BodyWidget> {
   TextEditingController _priceController = TextEditingController();
 
   var purchaseDateInMillis = DateTime.now().millisecondsSinceEpoch;
+  SpeechToText speechToText = SpeechToText();
+  bool isSpeechAvailable = false;
 
   int selectedFrequentItem = -1;
 
   // List<Item> frequentItemList = List.empty();
 
+  void _errorListener(SpeechRecognitionError error) {
+    // print("Received error status: $error, listening: ${speech.isListening}");
+    setState(() {
+      isSpeechAvailable = false;
+      print('Error in speech = ${error.errorMsg}');
+    });
+  }
+
+  void _statusListener(String status) {
+    // print(
+    // 'Received listener status: $status, listening: ${speech.isListening}');
+    setState(() {
+      print('Error in speech = $status');
+    });
+  }
+
+
   @override
   void initState() {
+
+    speechToText.initialize(onError: _errorListener,
+        onStatus: _statusListener, debugLogging: true)
+        .then((value) => isSpeechAvailable = value);
 
     if(widget.item != null){
       purchaseDateInMillis = widget.item.purchaseDate;
@@ -102,22 +130,12 @@ class __BodyWidgetState extends State<_BodyWidget> {
     }
 
 
-    if(widget.frequentItems.isNotEmpty){
-      // frequentItemList = widget.frequentItems;
-      //
-      // final map2 = <String, int>{};
-      // for (final m in widget.frequentItems) {
-      //   final name = m.itemName;
-      //   map2[name] = map2.containsKey(name) ? map2[name] + 1 : 1;
-      // }
-      //
-      // var frequentItems = map2.keys.toList(growable: false);
-      // frequentItems.sort((k1, k2) => map2[k2].compareTo(map2[k1]));
+    if(widget.lastPurchasedItems.isNotEmpty){
 
-      widget.frequentItems.sort((e1, e2)=> e1.itemName.compareTo(e2.itemName));
-      print('before - ${widget.frequentItems}');
-      widget.frequentItems = widget.frequentItems.toSet().toList();
-      print('after - ${widget.frequentItems}');
+      widget.lastPurchasedItems.sort((e1, e2)=> e1.itemName.compareTo(e2.itemName));
+      print('before - ${widget.lastPurchasedItems}');
+      widget.lastPurchasedItems = widget.lastPurchasedItems.toSet().toList();
+      print('after - ${widget.lastPurchasedItems}');
 
 
     }
@@ -131,10 +149,17 @@ class __BodyWidgetState extends State<_BodyWidget> {
 
 
     if(selectedFrequentItem != -1){
-      Item item = widget.frequentItems[selectedFrequentItem];
+      Item item = widget.lastPurchasedItems[selectedFrequentItem];
       _nameController.text = item.itemName;
       _priceController.text =  item.itemPrice.toString();
+      selectedFrequentItem = -1;
 
+    }
+
+    String _defaultLocale() {
+      var locale =  Localizations.localeOf(context).languageCode+"_"+Localizations.localeOf(context).countryCode;
+      print('Default Locale - $locale');
+      return locale;
     }
 
 
@@ -142,15 +167,15 @@ class __BodyWidgetState extends State<_BodyWidget> {
       child: Column(
         children: [
 
-          widget.frequentItems.isNotEmpty ? Padding(
+          widget.lastPurchasedItems.isNotEmpty ? Padding(
             padding: const EdgeInsets.all(8.0),
             child: ralewayText('Frequent Items'),
           ) : SizedBox(),
 
           Wrap(
             alignment: WrapAlignment.spaceEvenly,
-            children: List.generate(widget.frequentItems.take(7).length, (index) {
-              Item item = widget.frequentItems[index];
+            children: List.generate(widget.lastPurchasedItems.take(7).length, (index) {
+              Item item = widget.lastPurchasedItems[index];
               return Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: ChoiceChip(
@@ -176,21 +201,46 @@ class __BodyWidgetState extends State<_BodyWidget> {
 
           SizedBox(height: 20,),
 
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: TextField(
-              autofocus: true,
-              controller: _nameController,
-              keyboardType: TextInputType.multiline,
-              style: TextStyle().copyWith(fontSize: 26, fontWeight: FontWeight.w500 ),
-              decoration: InputDecoration(
-                  labelText: "What would you like to add?",
-                  labelStyle: TextStyle(fontWeight: FontWeight.w300,  fontSize: 22, ),
-                  hintText: "Name of the Item",
-                  border: InputBorder.none,
-                  hintStyle: TextStyle().copyWith(fontSize: 26, fontWeight: FontWeight.w300, color: Colors.grey[400])
+          Stack(
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: TextField(
+                    autofocus: true,
+                    controller: _nameController,
+                    keyboardType: TextInputType.multiline,
+                    style: TextStyle().copyWith(fontSize: 26, fontWeight: FontWeight.w500 ),
+                    decoration: InputDecoration(
+                        labelText: "What would you like to add?",
+                        labelStyle: TextStyle(fontWeight: FontWeight.w300,  fontSize: 22, ),
+                        hintText: "Name of the Item",
+                        border: InputBorder.none,
+                        hintStyle: TextStyle().copyWith(fontSize: 26, fontWeight: FontWeight.w300, color: Colors.grey[400])
+                    ),
+                  ),
+                ),
               ),
-            ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 20),
+                  child: IconButton(
+                    icon: Icon(Icons.mic),
+                    onPressed: (){
+                      speechToText.listen(onResult: (result){
+                        String bestMatch = result.alternates.first.recognizedWords;
+                        setState(() {
+                          _nameController.text = bestMatch;
+                        });
+                      }, localeId: _defaultLocale(), partialResults: false);
+                      Future.delayed(Duration(seconds: 5)).then((value) => speechToText.stop());
+                    },
+                  ),
+                ),
+              )
+            ],
           ),
 
           SizedBox(height: 30,),

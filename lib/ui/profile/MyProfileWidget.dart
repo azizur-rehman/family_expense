@@ -182,7 +182,7 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
                   MaterialPageRoute(
                       builder: (context) => LoginMainWidget()
                   ),
-                  ModalRoute.withName("/")
+                  ModalRoute.withName("/HomwWidget")
               );
             }, icon: Icon(Icons.logout), label: ralewayText('Logout'), padding: EdgeInsets.all(20),),
 

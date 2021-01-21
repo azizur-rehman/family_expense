@@ -254,7 +254,7 @@ class _CreateFamilyWidgetState extends State<CreateFamilyWidget> {
                         MaterialPageRoute(
                             builder: (context) => HomeWidget()
                         ),
-                        ModalRoute.withName("/")
+                        ModalRoute.withName("/JoinFamilyWidget")
                     );
                   });
 

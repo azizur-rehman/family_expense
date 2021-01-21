@@ -230,9 +230,16 @@ class CreateUserWidget extends StatelessWidget {
                         //write to pref and then move
                          saveKey(uid, isAvailable.get(key_familyId));
                          hideSnackBar(context);
-                         await Future.delayed(Duration(seconds: 3)).then((value) => Navigator.pushAndRemoveUntil(
-                             context, MaterialPageRoute(builder: (context) => HomeWidget()), ModalRoute.withName("/")
-                         ));
+                         showProgressSnack(context, 'Updating...');
+                         await Future.delayed(Duration(seconds: 3)).then((value) {
+                           Navigator.pushAndRemoveUntil(
+                               context, MaterialPageRoute(
+                               builder: (context) => HomeWidget()),
+                               ModalRoute.withName("/OTPWidget")
+                           );
+
+                           hideSnackBar(context);
+                         });
 
                         return;
                       }

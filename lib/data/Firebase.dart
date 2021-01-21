@@ -28,8 +28,13 @@ Widget loadName(String uid, TextStyle style){
   if(uid == null)
     return Text('No Name');
 
-  if(FirebaseAuth.instance.currentUser.uid == uid)
-    return Text(currentUser.displayName.capitalize(), style: style,);
+  if(FirebaseAuth.instance.currentUser.uid == uid) {
+    try {
+      return Text(currentUser.displayName.capitalize(), style: style,);
+    } catch (e) {
+      return SizedBox();
+    }
+  }
 
   return FutureBuilder(builder: (builder, snapshot){
     // if(snapshot.hasData)
@@ -64,7 +69,8 @@ String getStringInitials(String text){
 
 Widget loadNameAvatar(String uid){
   print('Loading name for - $uid');
-  if(currentUser.uid == uid)
+
+  if(currentUser != null && currentUser.uid == uid)
     return circleAvatar(getStringInitials(currentUser.displayName));
 
   return FutureBuilder(builder: (builder, snapshot){
