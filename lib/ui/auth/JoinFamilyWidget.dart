@@ -18,13 +18,13 @@ class JoinOrCreateFamilyWidget extends StatefulWidget {
 class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
 
   TextEditingController _joinEditingController = TextEditingController();
-  String uid = FirebaseAuth.instance.currentUser.uid;
+  String? uid = FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    FirebaseAuth.instance.currentUser.reload();
+    FirebaseAuth.instance.currentUser?.reload();
   }
 
 
@@ -93,14 +93,14 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
 
                   if(familySnapshot.docs.isNotEmpty){
                     Family family = Family.fromJson(familySnapshot.docs.first.data());
-                    String familyId = family.id;
+                    String familyId = family.id!;
 
                     //check if already added
                     var familyMemberSnapshot = await familyMemberRef.where('uid' , isEqualTo: uid).where('familyId', isEqualTo: familyId).get();
                     if(familyMemberSnapshot.size > 0){
                       //already in the family
                       FamilyMember member = FamilyMember.fromJson(familyMemberSnapshot.docs.first.data());
-                      saveKey(uid, familyId);
+                      saveKey(uid!, familyId);
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       Navigator.pushAndRemoveUntil(
                           context, MaterialPageRoute(builder: (context) => HomeWidget()),
@@ -110,15 +110,15 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
                     }
                     else{
                       //add as a member
-                      familyMemberRef.doc(uid).set(FamilyMember(uid: uid, familyId: familyId, moderator: false, verified: false, name: currentUser.displayName).toJson())
+                      familyMemberRef.doc(uid).set(FamilyMember(uid: uid, familyId: familyId, moderator: false, verified: false, name: currentUser?.displayName).toJson())
                           .then((value) {
                         Fluttertoast.showToast(msg: 'Your family Request is being sent to the moderator');
                         //add notification
                         notificationRef.add(NotificationData(from: uid, familyId: familyId,
                             createdAt: DateTime.now().millisecondsSinceEpoch,
-                            title: '${currentUser.displayName} wants to join the family').toJson());
+                            title: '${currentUser?.displayName} wants to join the family').toJson());
 
-                        saveKey(uid, familyId);
+                        saveKey(uid!, familyId);
                         //clear and navigate to stack
                         Navigator.pushAndRemoveUntil(
                             context,
@@ -169,7 +169,7 @@ class _CreateFamilyWidgetState extends State<CreateFamilyWidget> {
   TextEditingController _editingController = TextEditingController();
 
   var isUpdating = false;
-  String uid = FirebaseAuth.instance.currentUser.uid;
+  String? uid = FirebaseAuth.instance.currentUser?.uid;
 
   @override
   Widget build(BuildContext context) {
@@ -228,11 +228,11 @@ class _CreateFamilyWidgetState extends State<CreateFamilyWidget> {
                 familyRef.doc(familyId).set(family.toJson())
                     .then((value) {
                   //store pref to local
-                  saveKey(uid, familyId);
+                  saveKey(uid!, familyId);
 
                   //save current member as family member
                   familyMemberRef.doc(uid).set(
-                      FamilyMember(name: currentUser.displayName,
+                      FamilyMember(name: currentUser?.displayName,
                           addedOn: DateTime
                               .now()
                               .millisecondsSinceEpoch,
@@ -247,7 +247,7 @@ class _CreateFamilyWidgetState extends State<CreateFamilyWidget> {
                   //     builder: (builder)=>HomeWidget()
                   // ));
 
-                  FirebaseAuth.instance.currentUser.reload().then((value) {
+                  FirebaseAuth.instance.currentUser?.reload().then((value) {
                     print('reloaded after joining - $currentUser');
                     Navigator.pushAndRemoveUntil(
                         context,

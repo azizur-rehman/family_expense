@@ -6,7 +6,7 @@ class DelayedAnimation extends StatefulWidget {
   final Widget child;
   final int delay;
 
-  DelayedAnimation({@required this.child, this.delay});
+  DelayedAnimation({required this.child, required this.delay});
 
   @override
   _DelayedAnimationState createState() => _DelayedAnimationState();
@@ -14,8 +14,8 @@ class DelayedAnimation extends StatefulWidget {
 
 class _DelayedAnimationState extends State<DelayedAnimation>
     with TickerProviderStateMixin {
-  AnimationController _controller;
-  Animation<Offset> _animOffset;
+  late AnimationController _controller;
+  late Animation<Offset> _animOffset;
 
   @override
   void initState() {

@@ -13,7 +13,7 @@ void saveKey(String key, String value) {
   });
 }
 
-Future<String> getPrefValue(String key)async{
+Future<String?> getPrefValue(String key)async{
   return await getPref().then((value) => value.getString(key));
 }
 
@@ -30,6 +30,6 @@ void deleteKey(String key)async{
 }
 
 
-User currentUser = FirebaseAuth.instance.currentUser;
-String uid = currentUser.uid;
-String currentDialCode = CountryCodes.dialNumbers().firstWhere((element) => currentUser.phoneNumber.startsWith(element));
+User? currentUser = FirebaseAuth.instance.currentUser;
+String? uid = currentUser?.uid;
+String? currentDialCode = CountryCodes.dialNumbers().firstWhere((element) => currentUser!.phoneNumber!.startsWith(element as Pattern));

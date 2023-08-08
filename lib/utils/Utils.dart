@@ -16,7 +16,7 @@ import 'package:intl/intl.dart';
 import 'package:family_expense/utils/extensions/Extensions.dart';
 import 'package:random_color/random_color.dart';
 
-String validateMobile(String value) {
+String? validateMobile(String value) {
   String pattern = r'(^(?:[+0]9)?[0-9]{10,12}$)';
   RegExp regExp = new RegExp(pattern);
   if (value.length == 0) {
@@ -46,8 +46,8 @@ Widget circularProgressBar = Center(child:Padding(padding: EdgeInsets.all(8), ch
 
 Widget textMessage(String message ) => Padding(padding: EdgeInsets.all(15), child: Text(message),);
 
-Widget ralewayText(String text, {double fontSize = 18, TextStyle style }) => Text(text.capitalize(), style: (style != null ? style : GoogleFonts.raleway()).copyWith(fontSize: fontSize),);
-Widget ralewayTextCentered(String text, {double fontSize = 18, TextStyle style }) => Text(text.capitalize(), style: (style != null ? style : GoogleFonts.raleway()).copyWith(fontSize: fontSize), textAlign: TextAlign.center,);
+Widget ralewayText(String text, {double fontSize = 18, TextStyle? style }) => Text(text.capitalize(), style: (style != null ? style : GoogleFonts.raleway()).copyWith(fontSize: fontSize),);
+Widget ralewayTextCentered(String text, {double fontSize = 18, TextStyle? style }) => Text(text.capitalize(), style: (style != null ? style : GoogleFonts.raleway()).copyWith(fontSize: fontSize), textAlign: TextAlign.center,);
 
 
 Widget numberAvatar(int index) => circleAvatar((index+1).toString());
@@ -100,58 +100,56 @@ String formatDateWithFormatter(int millis, String format) => DateFormat(format).
 
 
 Widget bindPurchaseListItem(BuildContext context, Item item, int index, bool requireDate){
-  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+  final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
   return Slidable(
-    actionPane: SlidableDrawerActionPane(),
-    actionExtentRatio: 0.12,
-    secondaryActions: <Widget>[
-      IconSlideAction(
-        // caption: 'Remove',
-        color: Colors.transparent,
-        iconWidget: Icon(Icons.delete, color: getBlackWhiteColorWithTheme(context) ,),
-        onTap: ()async {
-          var confirm = await showConfirmDialog(context, 'Would you like to delete this item?');
-            if(!confirm) return;
+    startActionPane: ActionPane(motion: ScrollMotion(), children: [
+        SlidableAction(
+      // caption: 'Remove',
+      foregroundColor: Colors.transparent,
+      icon: Icons.delete, //Icon(Icons.delete, color: getBlackWhiteColorWithTheme(context) ,),
+      onPressed: (context)async {
+        var confirm = await showConfirmDialog(context, 'Would you like to delete this item?');
+        if(!confirm) return;
 
-          showProgressSnack(context, 'Removing Item');
-          itemRef.doc(item.itemId).delete()
-              .then((value) async{
-                //deduct amount from totals
-                hideSnackBar(context); showSnackBar(context, 'Item removed');
+        showProgressSnack(context, 'Removing Item');
+        itemRef.doc(item.itemId).delete()
+            .then((value) async{
+          //deduct amount from totals
+          hideSnackBar(context); showSnackBar(context, 'Item removed');
 
-                var expenseData = await familyExpenseRef.doc(item.familyId).get();
-                if(expenseData.exists){
-                  familyExpenseRef.doc(item.familyId).update({ key_amount: ((expenseData.get(key_amount)) - item.itemPrice) , 'updatedAt': item.addedOn,
-                    'remaining': ((expenseData.get('remaining')) - item.itemPrice)  });
-                }
+          var expenseData = await familyExpenseRef.doc(item.familyId).get();
+          if(expenseData.exists){
+            familyExpenseRef.doc(item.familyId).update({ key_amount: ((expenseData.get(key_amount)) - item.itemPrice) , 'updatedAt': item.addedOn,
+              'remaining': ((expenseData.get('remaining')) - item.itemPrice)  });
+          }
 
-              })
-              .catchError( (onError) => hideSnackBar(context));
+        })
+            .catchError( (onError) => hideSnackBar(context));
 
-        },
-      ),
+      },
+    ),
 
-      IconSlideAction(
+        SlidableAction(
         // caption: 'Edit',
-        color: Colors.transparent,
+        foregroundColor: Colors.transparent,
         // color: Colors.green,
-        iconWidget: Icon(Icons.edit_outlined , color: getBlackWhiteColorWithTheme(context),),
-        onTap: ()async {
-          var familyId = await getPrefValue(uid);
+        icon:  Icons.edit_outlined, // Icon(Icons.edit_outlined , color: getBlackWhiteColorWithTheme(context),),
+        onPressed: (context)async {
+          var familyId = await getPrefValue(uid!);
           moveToPage(context, AddItemDialogWidget(familyId: familyId, item: item,));
         },
       ),
-    ],
+      ]),
     child: ListTile(
       leading: numberAvatar(index),
-      title: Text(item.itemName),
-      subtitle: loadName(item.addedBy, Theme.of(context).textTheme.caption),
+      title: Text(item.itemName!),
+      subtitle: loadName(item.addedBy, Theme.of(context).textTheme.bodySmall!),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('${getCurrency()} ${item.itemPrice.toString()}', style: Theme.of(context).textTheme.caption.copyWith(fontWeight: FontWeight.w300, fontSize: 22),),
-          if(requireDate) Text(formattedDate(item.purchaseDate), style: Theme.of(context).textTheme.overline,) else SizedBox()
+          Text('${getCurrency()} ${item.itemPrice.toString()}', style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w300, fontSize: 22),),
+          if(requireDate) Text(formattedDate(item.purchaseDate!), style: Theme.of(context).textTheme.labelSmall,) else SizedBox()
         ],
       ),
     ),
@@ -181,7 +179,7 @@ var thisMonthStartMillis = DateFormat("dd-MM-yyyy").parse("01-${DateTime.now().m
 moveToPage(BuildContext context, Widget widget) => Navigator.push(context, MaterialPageRoute(builder: (builder) => widget));
 
 
-Widget getPlaceholderWidget(String text,  {String svgAsset, double height = 120.0, VoidCallback onTap, double messageFontSize = 16}){
+Widget getPlaceholderWidget(String text,  {String? svgAsset, double height = 120.0, VoidCallback? onTap, double messageFontSize = 16}){
 
   String path = "assets/icons";
 

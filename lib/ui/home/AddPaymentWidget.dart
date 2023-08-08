@@ -14,19 +14,19 @@ import 'package:family_expense/utils/extensions/Extensions.dart';
 import 'package:google_fonts/google_fonts.dart';
 class AddPaymentWidget extends StatelessWidget {
 
-  final String familyId;
+  final String? familyId;
   final List<FamilyMember> members;
 
   final Map maxCollection ;
-  AddPaymentWidget({Key key, this.familyId, this.members, this.maxCollection}):super(key:key);
-  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+  AddPaymentWidget({ Key? key, this.familyId, required this.members, required this.maxCollection}):super(key:key);
+  final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
 
   @override
   Widget build(BuildContext context) {
     // String familyId = familyId;
     var query = familyMemberRef.where("uid", isEqualTo: uid).where("familyId", isEqualTo: familyId).where('verified', isEqualTo: true);
-    if(familyId == null || familyId.isEmpty){
+    if(familyId == null || familyId?.isEmpty == true){
       Navigator.pop(context);
       Fluttertoast.showToast(msg: 'You are not in a family yet');
       return SizedBox();
@@ -66,12 +66,12 @@ class AddPaymentWidget extends StatelessWidget {
 // ignore: camel_case_types
 class _bodyContainer extends StatefulWidget {
 
-  final String familyId;
+  final String? familyId;
   final List<FamilyMember> members;
-  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+  final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
   final Map maxCollection ;
-  _bodyContainer({Key key, this.familyId, this.members, this.maxCollection}):super(key:key);
+  _bodyContainer({Key? key, this.familyId, required this.members, required this.maxCollection}):super(key:key);
 
   @override
   __bodyContainerState createState() => __bodyContainerState();
@@ -84,8 +84,8 @@ class __bodyContainerState extends State<_bodyContainer> {
   final TextEditingController _priceController = TextEditingController();
 
   var isInserting = false;
-  var _memberListIndex = 0;
-  FamilyMember member;
+  int? _memberListIndex = 0;
+  FamilyMember? member;
 
 
   @override
@@ -165,7 +165,7 @@ class __bodyContainerState extends State<_bodyContainer> {
               children: [
 
                 FutureBuilder(
-                  future: getPrefValue(widget.uid),
+                  future: getPrefValue(widget.uid!),
                   builder: (context, familyId) => MaterialButton(
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -195,13 +195,13 @@ class __bodyContainerState extends State<_bodyContainer> {
                         return;
                       }
 
-                      FamilyMember member = widget.members[_memberListIndex];
+                      FamilyMember member = widget.members[_memberListIndex??0];
 
-                      num price = num.tryParse(_priceController.text);
+                      num? price = num.tryParse(_priceController.text);
                       print('Max amount = ${widget.maxCollection[member.uid] }');
 
 
-                      if(price <= 0)
+                      if(price! <= 0)
                         return;
 
                       if(price > widget.maxCollection[member.uid] ){
@@ -216,7 +216,7 @@ class __bodyContainerState extends State<_bodyContainer> {
                       //first get all payments
                       // var currentFamilyPayments = await familyPaymentsRef.where(key_familyId, isEqualTo: familyId.data).get();
                       // if(currentFamilyPayments.docs.isEmpty)
-                      familyPaymentsRef.add(PaymentModel(uid: member.uid, familyId: familyId.data,
+                      familyPaymentsRef.add(PaymentModel(uid: member.uid, familyId: familyId.data.toString(),
                           updatedOn: DateTime.now().millisecondsSinceEpoch, amount: num.parse(_priceController.text)).toJson())
                       .then((value) {
                         Navigator.pop(context);

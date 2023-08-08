@@ -2,14 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class Family{
-  String name;
-  String id;
-  String createdBy;
-  int createdAt;
-  int updatedAt;
-  String code;
+  String? name;
+  String? id;
+  String? createdBy;
+  int? createdAt;
+  int? updatedAt;
+  String? code;
 
-  Family({this.name, this.id, this.createdBy, this.createdAt, this.updatedAt, this.code});
+  Family({ this.name,  this.id,  this.createdBy,  this.createdAt,  this.updatedAt,  this.code});
 
   Family.fromJson(Map<String, dynamic> json) {
     name = json['name'];
@@ -34,13 +34,13 @@ class Family{
 }
 
 class FamilyMember {
-  String uid, familyId;
-  bool moderator;
-  bool verified;
-  int addedOn;
-  num paymentDone = 0.0;
-  num sharePercent = 0.0;
-  String name = 'No Name';
+  String? uid, familyId;
+  bool? moderator;
+  bool? verified;
+  int? addedOn;
+  num? paymentDone = 0.0;
+  num? sharePercent = 0.0;
+  String? name = 'No Name';
 
 
   FamilyMember({this.uid, this.moderator, this.verified, this.addedOn, this.familyId, this.paymentDone = 0.0, this.sharePercent = 0.0, this.name = 'no name'});
@@ -72,14 +72,14 @@ class FamilyMember {
 
 
 class Item {
-  String itemId;
-  String familyId;
-  int addedOn;
-  int updatedOn;
-  String itemName;
-  num itemPrice;
-  String addedBy;
-  int purchaseDate;
+  String? itemId;
+  String? familyId;
+  int? addedOn;
+  int? updatedOn;
+  String? itemName;
+  num? itemPrice;
+  String? addedBy;
+  int? purchaseDate;
 
   Item(
       {this.itemId,
@@ -118,10 +118,10 @@ class Item {
 
 
 class UserData {
-  String uid;
-  int createdAt;
-  int updatedOn;
-  String name, phone;
+  String? uid;
+  int? createdAt;
+  int? updatedOn;
+  String? name, phone;
 
   UserData({this.uid, this.createdAt, this.updatedOn, this.name, this.phone});
 
@@ -146,11 +146,11 @@ class UserData {
 
 
 class NotificationData {
-  String from;
-  int createdAt;
-  String familyId;
-  String title, body, to, id;
-  bool read = false;
+  String? from;
+  int? createdAt;
+  String? familyId;
+  String? title, body, to, id;
+  bool? read = false;
 
   NotificationData({this.from, this.createdAt, this.familyId, this.title, this.body = '', this.to, this.id, this.read = false});
 
@@ -181,9 +181,9 @@ class NotificationData {
 
 
 class PaymentModel {
-  String uid, familyId;
-  int updatedOn;
-  num amount;
+  String? uid, familyId;
+  int? updatedOn;
+  num? amount;
 
   PaymentModel({this.uid, this.amount, this.updatedOn,  this.familyId});
 
@@ -206,9 +206,9 @@ class PaymentModel {
 
 
 class MessageModel {
-  String sentBy, familyId;
-  int timestamp;
-  String message, type;
+  String? sentBy, familyId;
+  int? timestamp;
+  String? message, type;
 
   MessageModel({this.sentBy, this.timestamp , this.message, this.type, this.familyId});
 

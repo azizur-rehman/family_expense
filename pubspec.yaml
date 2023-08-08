@@ -15,10 +15,10 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 1.0.0+1
+version: 1.0.5+5
 
 environment:
-  sdk: ">=2.7.0 <3.0.0"
+  sdk: ">=2.12.0 <3.7.0"
 
 dependencies:
   flutter:
@@ -27,43 +27,44 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.1
+  cupertino_icons: ^1.0.5
   avatar_glow:
-  shared_preferences: '0.5.12+4'
-  fluttertoast: ^7.1.5
+  shared_preferences: ^2.2.0
+  fluttertoast: ^8.2.2
   # firebase
-  firebase_core: ^0.5.3
-  firebase_auth: ^0.18.4
+  firebase_core: ^2.15.0
+  firebase_auth: ^4.7.2
   # Add the dependency for the FlutterFire plugin for Google Analytics
-  firebase_analytics: ^5.0.2
-  cloud_firestore: ^0.14.4
-  flutter_svg: ^0.19.2+1
-  google_fonts: ^1.1.1
-  fl_chart: ^0.12.1
-  syncfusion_flutter_charts: ^18.4.30
-  random_string: ^2.1.0
-  intl: ^0.16.1
-  grouped_list: ^3.7.1
-  flutter_slidable: ^0.5.7
-  confirm_dialog: ^0.1.1
-  flappy_search_bar: ^1.7.2
-  country_codes: ^1.0.3
-  flutter_xlider: ^3.4.0
-  flutter_chat_bubble: ^1.0.2
-  share: ^0.6.5+4
+  firebase_analytics: ^10.4.4
+  cloud_firestore: ^4.8.4
+  flutter_svg: ^2.0.7
+  google_fonts: ^5.1.0
+  fl_chart: ^0.63.0
+  syncfusion_flutter_charts: ^22.2.7
+  random_string: ^2.3.1
+  intl: ^0.18.1
+  grouped_list: ^5.1.2
+  flutter_slidable: ^3.0.0
+  confirm_dialog: ^1.0.2
+#  flappy_search_bar: ^1.7.2
+  country_codes: ^2.2.0
+  flutter_xlider: ^3.5.0
+  flutter_chat_bubble: ^2.0.2
+  share: ^2.0.4
   random_color: ^1.0.5
-  contacts_service: ^0.4.6
-  permission_handler: ^5.0.1+1
-  collection: ^1.14.13
-  speech_to_text: ^3.1.0
+  contacts_service: ^0.6.3
+  permission_handler: ^10.4.3
+  collection: ^1.17.1
+  speech_to_text: ^6.3.0
+  material_floating_search_bar_2: ^0.5.0
 #  barcode_scan: ^0.0.4
 #  qr_flutter: ^1.1.1
 #  flutter_cupertino_date_picker: ^1.0.26+2
 
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+#dev_dependencies:
+#  flutter_test:
+#    sdk: flutter
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

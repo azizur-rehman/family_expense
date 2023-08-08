@@ -23,14 +23,14 @@ const String key_familyId = 'familyId';
 const String key_amount = 'amount', key_remaining = 'remaining';
 
 
-Widget loadName(String uid, TextStyle style){
+Widget loadName(String? uid, TextStyle style){
   print('Loading name for - $uid');
   if(uid == null)
     return Text('No Name');
 
-  if(FirebaseAuth.instance.currentUser.uid == uid) {
+  if(FirebaseAuth.instance.currentUser?.uid == uid) {
     try {
-      return Text(currentUser.displayName.capitalize(), style: style,);
+      return Text(currentUser?.displayName?.capitalize()??'', style: style,);
     } catch (e) {
       return SizedBox();
     }
@@ -41,8 +41,8 @@ Widget loadName(String uid, TextStyle style){
     //   return snapshot.
     if(snapshot.hasData && !snapshot.hasError) {
       try {
-        var user = UserData.fromJson(snapshot.data.data());
-        return Text(user.name.capitalize(), style: style, textAlign: TextAlign.start,);
+        UserData user = UserData.fromJson(snapshot.data as Map<String, dynamic> );
+        return Text(user.name!.capitalize(), style: style, textAlign: TextAlign.start,);
       }
       catch(e){
         print('err - $e');
@@ -70,16 +70,16 @@ String getStringInitials(String text){
 Widget loadNameAvatar(String uid){
   print('Loading name for - $uid');
 
-  if(currentUser != null && currentUser.uid == uid)
-    return circleAvatar(getStringInitials(currentUser.displayName));
+  if(currentUser != null && currentUser?.uid == uid)
+    return circleAvatar(getStringInitials(currentUser!.displayName!));
 
   return FutureBuilder(builder: (builder, snapshot){
     // if(snapshot.hasData)
     //   return snapshot.
     if(snapshot.hasData && !snapshot.hasError) {
       try {
-        var user = UserData.fromJson(snapshot.data.data());
-        return circleAvatar(getStringInitials(user.name));
+        var user = UserData.fromJson(snapshot.data as Map<String, dynamic>);
+        return circleAvatar(getStringInitials(user.name!));
       }
       catch(e){
         print('err - $e');
@@ -103,21 +103,21 @@ FutureBuilder<DocumentSnapshot> loadFamilyCode(String familyId){
     // if(snapshot.hasData)
     //   return snapshot.
     if(snapshot.hasData) {
-      var family = Family.fromJson(snapshot.data.data());
+      var family = Family.fromJson(snapshot.data?.data() as Map<String, dynamic>);
       return Column(
         children: [
           // QrImage(data: family.code, size: 320, gapless: false,),
           // textMessage('Or'),
           Column(
             children: [
-              Text(family.code, style: GoogleFonts.ubuntu().copyWith(color: Theme.of(builder).accentColor, fontSize: 36)),
+              Text(family.code??'', style: GoogleFonts.ubuntu().copyWith(color: Theme.of(builder).colorScheme.secondary, fontSize: 36)),
               SizedBox(height: 15,),
 
-              OutlineButton.icon(
+              OutlinedButton.icon(
                 label: ralewayText('Share Code', style: GoogleFonts.raleway().copyWith()),
                 onPressed: ()async=> await Share.share('Use the code - ${family.code} to join ${family.name}.\n\nDownload the android app - https://familyexpense.page.link/app'),
                 icon: Icon(Icons.share_outlined, ),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
+                // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
               ),
             ],
           ),
@@ -131,7 +131,7 @@ FutureBuilder<DocumentSnapshot> loadFamilyCode(String familyId){
 
 void reloadCurrentUser(){
   try{
-    currentUser.reload();
+    currentUser?.reload();
   }
   catch(e){ }
 }

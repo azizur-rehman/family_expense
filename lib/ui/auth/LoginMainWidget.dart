@@ -80,13 +80,13 @@ class _LoginMainWidgetState extends State<LoginMainWidget> {
                       String phone = _phoneNumController.text;
                       print("Phone number : "+phone);
 
-                      String validatedText = validateMobile(phone);
+                      String? validatedText = validateMobile(phone);
                       if(validatedText != null)
                       {
                         Fluttertoast.showToast(msg: validatedText);
                         return;
                       }
-                      String dialCode = CountryCodes.dialCode();
+                      String dialCode = CountryCodes.dialCode()??'+91';
                       //Do phone authentication
                       Navigator.push(context, MaterialPageRoute(
                           builder: (context) => OTPWidget(phone: '$dialCode$phone',)
@@ -106,8 +106,8 @@ class _LoginMainWidgetState extends State<LoginMainWidget> {
 class _Background extends StatelessWidget {
   final Widget child;
   const _Background({
-    Key key,
-    @required this.child,
+    Key? key,
+    required this.child,
   }) : super(key: key);
 
   @override

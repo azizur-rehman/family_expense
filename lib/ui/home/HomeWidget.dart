@@ -42,7 +42,7 @@ class _HomeWidgetState extends State<HomeWidget> {
   var layoutIndex = 0;
   var familyId = "";
   var isUserVerified = false;
-  static final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+  static final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
 
   List<Widget> _homeWidgets = [
@@ -55,7 +55,7 @@ class _HomeWidgetState extends State<HomeWidget> {
   void initState() {
     super.initState();
     try {
-      FirebaseAuth.instance.currentUser.reload().then((value) => print('Home - ${currentUser}'));
+      FirebaseAuth.instance.currentUser?.reload().then((value) => print('Home - ${currentUser}'));
       // print('User name')
     }
     catch(e){ }
@@ -64,13 +64,13 @@ class _HomeWidgetState extends State<HomeWidget> {
   @override
   Widget build(BuildContext context) {
     //init family id
-    getPref().then((pref) => familyId = pref.getString(uid));
+    getPref().then((pref) => familyId = pref.getString(uid!)!);
 
     return Scaffold(
       key: _scaffold,
       // extendBody: true,
       // drawer: _drawer(),
-      appBar: AppBar(title: Text(_titles[layoutIndex], style: GoogleFonts.raleway().copyWith(color: Theme.of(context).accentColor)), centerTitle: true,
+      appBar: AppBar(title: Text(_titles[layoutIndex], style: GoogleFonts.raleway().copyWith(color: Theme.of(context).colorScheme.secondary)), centerTitle: true,
         backgroundColor: Colors.transparent, elevation: 0.0,
         actions: [
           IconButton(icon: Icon(Icons.notifications),
@@ -90,7 +90,7 @@ class _HomeWidgetState extends State<HomeWidget> {
             // splashColor: Colors.white,
             onPressed: () {
               if(isUserVerified)
-                moveToPage(context, AddItemDialogWidget(familyId: familyId,));
+                moveToPage(context, AddItemDialogWidget(familyId: familyId, item: null,));
               else
                 showSnackBar(context, 'You can only add items as soon as you get verified');
             } ,
@@ -115,7 +115,7 @@ class _HomeWidgetState extends State<HomeWidget> {
       return _homeWidgets[layoutIndex];
 
     return FutureBuilder(
-      future: getPrefValue(uid),
+      future: getPrefValue(uid!),
       builder: (context, familyId){
         if(familyId.hasData)
           //check if family Id exists in a family
@@ -125,12 +125,12 @@ class _HomeWidgetState extends State<HomeWidget> {
                 if(snapshot.connectionState == ConnectionState.waiting)
                   return circularProgressBar;
 
-                if(!snapshot.hasData && snapshot.data.docs.isEmpty){
+                if(!snapshot.hasData && snapshot.data!.docs.isEmpty){
                   return getPlaceholderWidget('You haven\'t joined any family yet\nTap to Join', svgAsset: 'people.svg');
                 }
 
 
-                if(snapshot.data.docs.first.get('verified') == false){
+                if(snapshot.data!.docs.first.get('verified') == false){
                   isUserVerified = false;
                   print('User - ${FirebaseAuth.instance.currentUser}');
                   return getPlaceholderWidget('Please wait while someone verifies you...');
@@ -160,11 +160,11 @@ class _HomeWidgetState extends State<HomeWidget> {
         if(!pref.hasData)
             return circularProgressBar;
 
-          var familyId = pref.data.get(uid);
+          String? familyId = pref.data?.getString(uid!);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Hi, ${FirebaseAuth.instance.currentUser.displayName} 👋',  style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.w300, fontSize: 20)),
+            Text('Hi, ${FirebaseAuth.instance.currentUser?.displayName} 👋',  style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.w300, fontSize: 20)),
             Text('Welcome back!', style: GoogleFonts.raleway().copyWith(fontWeight: FontWeight.bold, fontSize: 20),),
 
             SizedBox(height: 30,),
@@ -173,7 +173,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
             SizedBox(height: 20,),
 
-            _pieChartCard(familyId),
+            _pieChartCard(familyId as String?),
 
             SizedBox(height: 20,),
 
@@ -196,7 +196,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                             return circularProgressBar;
                           }
 
-                          if(snapshot.hasError || !snapshot.hasData || snapshot.data.size == 0)
+                          if(snapshot.hasError || !snapshot.hasData || snapshot.data!.size == 0)
                             return getPlaceholderWidget('No Items here', height: 80,  svgAsset: 'shopping-item.svg');
                             // return Padding(
                             //   padding: const EdgeInsets.all(20.0),
@@ -211,11 +211,11 @@ class _HomeWidgetState extends State<HomeWidget> {
                                 physics: NeverScrollableScrollPhysics(),
                                 itemBuilder: (BuildContext context, int index) {
 
-                                  Item item = Item.fromJson(snapshot.data.docs[index].data());
+                                  Item item = Item.fromJson(snapshot.data!.docs[index].data() as Map<String, dynamic>);
 
                                   return bindPurchaseListItem(context, item, index, true);
                                 },
-                                itemCount: snapshot.data.size,
+                                itemCount: snapshot.data?.size??0,
 
                               ),
                               Divider(height: 1,color: Colors.grey,),
@@ -243,8 +243,8 @@ class _HomeWidgetState extends State<HomeWidget> {
   );
 
   Widget _bottomBar(){
-    num sizeSelected = 32.0;
-    num sizeUnSelected = 28.0;
+    double sizeSelected = 32.0;
+    double sizeUnSelected = 28.0;
 
     return BottomAppBar(
       clipBehavior: Clip.antiAliasWithSaveLayer,
@@ -263,27 +263,27 @@ class _HomeWidgetState extends State<HomeWidget> {
               iconSize: layoutIndex == 0? sizeSelected : sizeUnSelected,
               padding: EdgeInsets.only(left: 28.0),
               icon: Icon(Icons.dashboard_outlined),
-              color: layoutIndex == 0? Theme.of(context).accentColor : null,
+              color: layoutIndex == 0? Theme.of(context).colorScheme.secondary : null,
               onPressed: () => _onTapped(0),
             ),
 
             IconButton(
               iconSize: layoutIndex == 1? sizeSelected : sizeUnSelected,
               padding: EdgeInsets.only(right: 28.0),
-              color: layoutIndex == 1? Theme.of(context).accentColor : null,
+              color: layoutIndex == 1? Theme.of(context).colorScheme.secondary : null,
               icon: Icon(Icons.people_alt_outlined),
               onPressed: () => _onTapped(1),
             ),
             IconButton(
               iconSize: layoutIndex == 2? sizeSelected : sizeUnSelected,
               padding: EdgeInsets.only(left: 28.0),
-              color: layoutIndex == 2? Theme.of(context).accentColor : null,
+              color: layoutIndex == 2? Theme.of(context).colorScheme.secondary : null,
               icon: Icon(Icons.message_outlined),
               onPressed: () => _onTapped(2),
             ),
             IconButton(
               iconSize: layoutIndex == 3? sizeSelected : sizeUnSelected,
-              color: layoutIndex == 3? Theme.of(context).accentColor : null,
+              color: layoutIndex == 3? Theme.of(context).colorScheme.secondary : null,
               padding: EdgeInsets.only(right: 28.0),
               icon: Icon(Icons.person_outline_rounded),
               onPressed:() => _onTapped(3),
@@ -295,7 +295,7 @@ class _HomeWidgetState extends State<HomeWidget> {
     );
   }
 
-  static Widget _pieChartCard(String familyId){
+  static Widget _pieChartCard(String? familyId){
 
     return  Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -309,11 +309,11 @@ class _HomeWidgetState extends State<HomeWidget> {
                 if(snapshot.connectionState == ConnectionState.waiting)
                   return circularProgressBar;
 
-                if(!snapshot.hasData || snapshot.hasError || !snapshot.data.exists)
+                if(!snapshot.hasData || snapshot.hasError || !snapshot.data!.exists)
                   return getPlaceholderWidget('No Data here', height: 80, svgAsset: 'pie-chart.svg');
 
-                num totalExpense = snapshot.data.exists ? snapshot.data.get(key_amount) : 0.0;
-                num totalBalance = snapshot.data.exists ? snapshot.data.get(key_remaining) : 0;
+                num totalExpense = snapshot.data!.exists ? snapshot.data?.get(key_amount) : 0.0;
+                num totalBalance = snapshot.data!.exists ? snapshot.data?.get(key_remaining) : 0;
 
 
                 //now load members
@@ -329,9 +329,9 @@ class _HomeWidgetState extends State<HomeWidget> {
                       return ralewayText('No Data here');
 
 
-                    List<FamilyMember> memberList = memberSnapshot.data.docs.map((e) {
-                          return FamilyMember.fromJson(e.data());
-                    }).toList();
+                    List<FamilyMember> memberList = memberSnapshot.data?.docs?.map((e) {
+                          return FamilyMember.fromJson(e.data() as Map<String, dynamic>);
+                    }).toList()??[];
 
                     //uids
 
@@ -351,23 +351,23 @@ class _HomeWidgetState extends State<HomeWidget> {
                         List<PaymentModel> payments = [];
                         Map maxCollection = Map<String,num>();
                         try{
-                          payments = paymentSnapshot.data.docs.map((e) => PaymentModel.fromJson(e.data())).toList();
+                          payments = paymentSnapshot.data!.docs.map((e) => PaymentModel.fromJson(e.data() as Map<String, dynamic>)).toList();
                         }catch(e){ }
 
                         num allPaymentsCollected = 0.0;
                         num myBalance = 0.0;
 
-                        List<PieChartData> pieChartData = memberList.map((member) {
+                        List<PieChartData>? pieChartData = memberList?.map((member) {
                           num userPayment = 0.0;
 
-                          try{ userPayment = payments.where((e) => e.uid == member.uid).toList().sumBy((e) => e.amount);} catch(e){ }
+                          try{ userPayment = payments.where((e) => e.uid == member.uid).toList().sumBy((e) => e.amount!);} catch(e){ }
                           print('${member.name} -> $userPayment');
-                          num bal = ((totalExpense * (member.sharePercent/100)).roundToDouble()) - userPayment ;
+                          double bal = ((totalExpense * (member.sharePercent!/100)).roundToDouble()) - userPayment ;
                           allPaymentsCollected += userPayment;
 
                           maxCollection[member.uid] = bal;
 
-                          return PieChartData('${member.name.capitalize()}', bal, randomColor());
+                          return PieChartData('${member.name!.capitalize()}', bal, randomColor());
                         }).toList() ;
 
 
@@ -405,18 +405,18 @@ class _HomeWidgetState extends State<HomeWidget> {
 
                               ListTile(
                                 leading: ralewayText('Total Spent', fontSize: 13),
-                                trailing:  Text('${getCurrency()} ${totalExpense.roundToDouble()}', style: Theme.of(context).textTheme.headline6.copyWith(fontWeight: FontWeight.w300),),
+                                trailing:  Text('${getCurrency()} ${totalExpense.roundToDouble()}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w300),),
                               ),
 
                               ListTile(
                                 leading: ralewayText('Unpaid', fontSize: 13),
-                                trailing:  Text('${getCurrency()} ${totalExpense - allPaymentsCollected}', style: Theme.of(context).textTheme.headline6.copyWith(fontWeight: FontWeight.w300),),
+                                trailing:  Text('${getCurrency()} ${totalExpense - allPaymentsCollected}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w300),),
                               ),
 
-                              memberList.any((e) => e.uid == uid && e.sharePercent > 0.0) ?
+                              memberList.any((e) => e.uid == uid && e.sharePercent! > 0.0) ?
                               ListTile(
                                 leading: ralewayText('My Balance',),
-                                trailing:  Text('${getCurrency()} ${maxCollection[uid]}', style: Theme.of(context).textTheme.headline5.copyWith(fontWeight: FontWeight.w300),),
+                                trailing:  Text('${getCurrency()} ${maxCollection[uid]}', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w300),),
                               ) : SizedBox(),
 
                               Divider(),
@@ -426,17 +426,17 @@ class _HomeWidgetState extends State<HomeWidget> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    OutlineButton.icon(
+                                    OutlinedButton.icon(
                                       label: ralewayText('Add Payments', fontSize: 14),
-                                      onPressed: ()=>  memberList.any((e) => e.moderator && e.uid == uid) ? moveToPage(context, AddPaymentWidget(familyId: familyId, members: memberList, maxCollection: maxCollection,)) : showSnackBar(context, 'You are not authorized to add payments'),
+                                      onPressed: ()=>  memberList?.any((e) => e!.moderator! && e.uid == uid) == true ? moveToPage(context, AddPaymentWidget(familyId: familyId, members: memberList, maxCollection: maxCollection,)) : showSnackBar(context, 'You are not authorized to add payments'),
                                       icon: Icon(Icons.addchart_rounded, ),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
+                                      // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
                                     ),
-                                    OutlineButton.icon(
+                                    OutlinedButton.icon(
                                       label: ralewayText('View Payments', fontSize: 14),
-                                      onPressed: ()=>  memberList.any((e) => e.moderator && e.uid == uid) ? moveToPage(context, PaymentsWidget()) : showSnackBar(context, 'You are not authorized to view payments'),
+                                      onPressed: ()=>  memberList.any((e) => e!.moderator! && e.uid == uid) ? moveToPage(context, PaymentsWidget()) : showSnackBar(context, 'You are not authorized to view payments'),
                                       icon: Icon(Icons.payments_outlined, ),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
+                                      // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25),),
                                     ),
                                   ],
                                 ),
@@ -468,8 +468,8 @@ class _HomeWidgetState extends State<HomeWidget> {
 
  class _DashboardChartWidget extends StatefulWidget {
 
-  final String familyId;
-  _DashboardChartWidget({Key key, this.familyId}):super(key: key);
+  final String? familyId;
+  _DashboardChartWidget({Key? key, this.familyId}):super(key: key);
 
    @override
    __DashboardChartWidgetState createState() => __DashboardChartWidgetState();
@@ -490,7 +490,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
                value: _chartCurrentType,
                items: ChartType.values.map((e) => DropdownMenuItem(child: textMessage((e != ChartType.MONTHLY) ?_getChartTitle(e) : 'Monthly'), value: e,)).toList(),
-               onChanged: (ChartType type){
+               onChanged: (ChartType? type){
 
                  if(type == ChartType.MONTHLY)
                    showMonthPicker(
@@ -501,10 +501,10 @@ class _HomeWidgetState extends State<HomeWidget> {
                        .then((date) => date!= null && date.millisecondsSinceEpoch <= DateTime.now().millisecondsSinceEpoch ? setState(() {
 
                      _selectedDate = date;
-                     _chartCurrentType = type;
+                     _chartCurrentType = type!;
                    }) : null);
                  else
-                   setState(() {_chartCurrentType = type; });
+                   setState(() {_chartCurrentType = type??ChartType.THIS_MONTH; });
                },
              )
            ],
@@ -517,7 +517,8 @@ class _HomeWidgetState extends State<HomeWidget> {
            // shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
            child: Stack(
                alignment: Alignment.topCenter,
-               overflow: Overflow.visible,
+               // overflow: Overflow.visible,
+               clipBehavior: Clip.none,
                children: [
              Positioned(
                  // top: 10.0,
@@ -543,7 +544,7 @@ class _HomeWidgetState extends State<HomeWidget> {
    int getEndMillisOfYear(int year) =>  DateFormat("dd-MM-yyyy").parse("31-12-$year").millisecondsSinceEpoch + Duration.millisecondsPerDay;
 
    var thisMonthStartMillis = DateFormat("dd-MM-yyyy").parse("01-${DateTime.now().month}-${DateTime.now().year}").millisecondsSinceEpoch;
-   ChartType _chartCurrentType = ChartType.THIS_MONTH;
+   late ChartType _chartCurrentType = ChartType.THIS_MONTH;
 
   Widget _dashboardChart() {
 
@@ -587,9 +588,9 @@ class _HomeWidgetState extends State<HomeWidget> {
             print(snapshot.error);
            return textMessage(snapshot.error.toString());
          }
-         var items = snapshot.data.docs.map((e) => Item.fromJson(e.data()));
+         var items = snapshot.data?.docs.map((e) => Item.fromJson(e.data() as Map<String, dynamic>));
 
-         print('Item Prices = ${items.map((e) => e.itemPrice).toList()}');
+         print('Item Prices = ${items?.map((e) => e.itemPrice).toList()}');
 
          //calculate month wise average in interval
          // var averagePerMonth = [];
@@ -603,11 +604,11 @@ class _HomeWidgetState extends State<HomeWidget> {
 
              num sum;
              try {
-               sum = items.map((e) =>
-               e.purchaseDate >= startMillis && e.purchaseDate <= endMillis ? e
+               sum = items!.map((e) =>
+               e.purchaseDate! >= startMillis && e.purchaseDate! <= endMillis ? e
                    .itemPrice : 0.0).reduce((item1, item2) {
-                 return item1.toDouble() + item2.toDouble();
-               });
+                 return item1!.toDouble() + item2!.toDouble();
+               })!;
              }catch(e){ sum = 0.0; }
 
              totalPerMonth.add(sum);
@@ -772,13 +773,13 @@ var _sampleList = [
 class SalesData {
 
   SalesData(this.month, this.expense);
-  final String month;
+  final String? month;
   final double expense;
 }
 
 class PieChartData {
-  PieChartData(this.x, this.y, [this.color]);
-  final String x;
+  PieChartData(this.x, this.y, this.color);
+  final String? x;
   final double y;
   final Color color;
 }

@@ -24,8 +24,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      darkTheme: ThemeData.dark().copyWith(accentColor: Colors.lightBlueAccent),
-      theme: ThemeData.light().copyWith(accentColor: Colors.lightBlueAccent),
+      darkTheme: ThemeData.dark().copyWith(colorScheme: ColorScheme.dark(secondary: Colors.lightBlueAccent,)),
+      theme: ThemeData.light().copyWith(colorScheme: ColorScheme.dark(secondary: Colors.lightBlueAccent)),
       // ui.home: LandingPage()
       home: LandingPage(),
     );
@@ -63,8 +63,8 @@ class LoginLandingPageWidget extends StatefulWidget {
 
 class _LoginLandingPageWidgetState extends State<LoginLandingPageWidget> with SingleTickerProviderStateMixin {
   final int delayedAmount = 100;
-  double _scale;
-  AnimationController _controller;
+  late double _scale;
+  late AnimationController _controller;
   @override
   void initState() {
     _controller = AnimationController(

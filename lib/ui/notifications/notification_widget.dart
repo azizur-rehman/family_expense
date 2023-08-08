@@ -12,7 +12,7 @@ class NotificationWidget extends StatelessWidget {
       appBar: AppBar(title: ralewayText('Notifications'),),
       body: Container(
         child: FutureBuilder(
-          future: getPrefValue(uid),
+          future: getPrefValue(uid??''),
           builder: (context, familySnapshot){
 
             if(familySnapshot.connectionState == ConnectionState.waiting)
@@ -21,7 +21,7 @@ class NotificationWidget extends StatelessWidget {
             Query myNotifications =  notificationRef.where('uid', isEqualTo: uid);
 
             print('Looking for -> ${myNotifications.parameters}');
-            Query familyNotifications;
+            Query? familyNotifications;
             if(familySnapshot.data != null ) {
               familyNotifications =
                   notificationRef.where('uid', isNotEqualTo: uid).where(
@@ -40,13 +40,13 @@ class NotificationWidget extends StatelessWidget {
 
 
 
-                List<NotificationData> myNotificationList = myNotificationSnap.hasData ? myNotificationSnap.data.docs.map((e) => NotificationData.fromJson(e.data())).toList() : [];
+                List<NotificationData> myNotificationList = myNotificationSnap.hasData ? myNotificationSnap.data!.docs.map((e) => NotificationData.fromJson(e.data() as Map<String, dynamic>)).toList() : [];
 
                 if(familySnapshot.data == null)
                   return _bindList(myNotificationList);
 
                 return StreamBuilder<QuerySnapshot>(
-                  stream: familyNotifications.snapshots(),
+                  stream: familyNotifications?.snapshots(),
                   builder: (context, familyNotificationSnap){
 
                     print(familyNotificationSnap.error);
@@ -58,7 +58,7 @@ class NotificationWidget extends StatelessWidget {
                       return _bindList(myNotificationList);
 
                     //merge both lists
-                    List<NotificationData> familyNotificationList = familyNotificationSnap.data.docs.map((e) => NotificationData.fromJson(e.data())).toList();
+                    List<NotificationData> familyNotificationList = familyNotificationSnap.data!.docs.map((e) => NotificationData.fromJson(e.data() as Map<String, dynamic>)).toList();
                     List<NotificationData> allNotifications = new List.from(myNotificationList)..addAll(familyNotificationList);
 
                     return _bindList(allNotifications);
@@ -96,9 +96,9 @@ class NotificationWidget extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           child: ListTile(
             leading: circleAvatar('${index+1}'),
-            title:  ralewayText(list[index].title, fontSize: 15),
+            title:  ralewayText(list[index].title!, fontSize: 15),
             // subtitle: ralewayText(list[index].body == null ? '' : list[index].body == null, fontSize: 13),
-            trailing: Text(formattedDate(list[index].createdAt), style: Theme.of(context).textTheme.caption.copyWith(fontSize: 12, ),),
+            trailing: Text(formattedDate(list[index].createdAt!), style: Theme.of(context).textTheme.caption!.copyWith(fontSize: 12, ),),
           ),
         );
       },

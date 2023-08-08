@@ -8,7 +8,6 @@ import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/ui/auth/JoinFamilyWidget.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/locale.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
@@ -16,9 +15,9 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 class AddItemDialogWidget extends StatelessWidget {
 
-  final String familyId;
-  final Item item;
-  AddItemDialogWidget({Key key, this.familyId, this.item}):super(key:key);
+  final String? familyId;
+  final Item? item;
+  AddItemDialogWidget({Key? key, this.familyId, this.item}):super(key:key);
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +26,7 @@ class AddItemDialogWidget extends StatelessWidget {
 
     // String familyId = familyId;
     var query = familyMemberRef.where("uid", isEqualTo: uid).where("familyId", isEqualTo: familyId).where('verified', isEqualTo: true);
-    if(familyId == null || familyId.isEmpty){
+    if(familyId == null || familyId?.isEmpty == true){
       Navigator.pop(context);
       Fluttertoast.showToast(msg: 'You are not in a family yet');
       return SizedBox();
@@ -55,7 +54,7 @@ class AddItemDialogWidget extends StatelessWidget {
                   builder: (context, itemSnapshot){
 
                     if(itemSnapshot.hasData){
-                      List<Item> items = itemSnapshot.data.docs.map((e) => Item.fromJson(e.data())).toList();
+                      List<Item> items = itemSnapshot.data?.docs.map((e) => Item.fromJson(e.data() as Map<String, dynamic>)).toList()??[];
                       return _BodyWidget(familyId: familyId, item: item, lastPurchasedItems: items,);
                     }
 
@@ -76,10 +75,10 @@ class AddItemDialogWidget extends StatelessWidget {
 class _BodyWidget extends StatefulWidget {
 
 
-  final String familyId ;
-  final Item item;
+  final String? familyId ;
+  final Item? item;
   List<Item> lastPurchasedItems = [];
-  _BodyWidget({Key key, this.familyId, this.item, this.lastPurchasedItems}):super(key:key);
+  _BodyWidget({Key? key, this.familyId, required this.item, required this.lastPurchasedItems}):super(key:key);
 
   @override
   __BodyWidgetState createState() => __BodyWidgetState();
@@ -124,15 +123,15 @@ class __BodyWidgetState extends State<_BodyWidget> {
         .then((value) => isSpeechAvailable = value);
 
     if(widget.item != null){
-      purchaseDateInMillis = widget.item.purchaseDate;
-      _nameController.text = widget.item.itemName;
-      _priceController.text = widget.item.itemPrice.toString();
+      purchaseDateInMillis = widget.item!.purchaseDate!;
+      _nameController.text = widget.item!.itemName!;
+      _priceController.text = widget.item!.itemPrice.toString();
     }
 
 
     if(widget.lastPurchasedItems.isNotEmpty){
 
-      widget.lastPurchasedItems.sort((e1, e2)=> e1.itemName.compareTo(e2.itemName));
+      widget.lastPurchasedItems.sort((e1, e2)=> e1.itemName!.compareTo(e2.itemName!));
       print('before - ${widget.lastPurchasedItems}');
       widget.lastPurchasedItems = widget.lastPurchasedItems.toSet().toList();
       print('after - ${widget.lastPurchasedItems}');
@@ -150,14 +149,14 @@ class __BodyWidgetState extends State<_BodyWidget> {
 
     if(selectedFrequentItem != -1){
       Item item = widget.lastPurchasedItems[selectedFrequentItem];
-      _nameController.text = item.itemName;
+      _nameController.text = item.itemName!;
       _priceController.text =  item.itemPrice.toString();
       selectedFrequentItem = -1;
 
     }
 
     String _defaultLocale() {
-      var locale =  Localizations.localeOf(context).languageCode+"_"+Localizations.localeOf(context).countryCode;
+      var locale =  Localizations.localeOf(context).languageCode+"_"+(Localizations.localeOf(context).countryCode??'');
       print('Default Locale - $locale');
       return locale;
     }
@@ -284,7 +283,7 @@ class __BodyWidgetState extends State<_BodyWidget> {
                   child:  GestureDetector(
                     child: Row(
                       children: [
-                        Text(formattedDate(purchaseDateInMillis), style: Theme.of(context).textTheme.subtitle1.copyWith(fontWeight: FontWeight.w300),),
+                        Text(formattedDate(purchaseDateInMillis), style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w300),),
                         Icon(Icons.arrow_drop_down_sharp)
                         // SvgPicture.asset("assets/icons/dropdown.svg")
                         // SvgPicture.asset("assets/icons/dropdown.svg", height: 40,),
@@ -292,11 +291,11 @@ class __BodyWidgetState extends State<_BodyWidget> {
                       ],
                     ),
                     onTap: ()async{
-                      DateTime picker = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2000), lastDate: DateTime.now());
+                      DateTime? picker = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2000), lastDate: DateTime.now());
 
                       setState(() {
                         //show date picker
-                        purchaseDateInMillis = picker.millisecondsSinceEpoch;
+                        purchaseDateInMillis = picker!.millisecondsSinceEpoch;
                         print(formattedDate(purchaseDateInMillis));
 
                       });
@@ -331,8 +330,8 @@ class __BodyWidgetState extends State<_BodyWidget> {
               SizedBox(width: 20,),
 
               FutureBuilder(
-                future: getPrefValue(uid),
-                builder: (context, familyId) => MaterialButton(
+                future: getPrefValue(uid!),
+                builder: (context, familyIdData) => MaterialButton(
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   color: Colors.grey[200],
@@ -343,7 +342,7 @@ class __BodyWidgetState extends State<_BodyWidget> {
                     if(isInserting)
                       return;
 
-                    if(familyId == null){
+                    if(familyIdData == null){
                       Navigator.popUntil(context, ModalRoute.withName('/'),);
 
                       Navigator.push(context, MaterialPageRoute(builder: (builder)=>JoinOrCreateFamilyWidget()));
@@ -357,10 +356,10 @@ class __BodyWidgetState extends State<_BodyWidget> {
                     }
 
                     //insert item
-                    String itemId = widget.item == null ? "Item_${DateTime.now().millisecondsSinceEpoch}" : widget.item.itemId;
-                    var time = widget.item == null ? DateTime.now().millisecondsSinceEpoch : widget.item.addedOn;
+                    String itemId = (widget.item == null ? "Item_${DateTime.now().millisecondsSinceEpoch}" : widget.item?.itemId)!;
+                    var time = widget.item == null ? DateTime.now().millisecondsSinceEpoch : widget.item?.addedOn!;
 
-                    Item item = Item(itemId: itemId, familyId: familyId.data, addedOn: time, updatedOn: time,
+                    Item item = Item(itemId: itemId, familyId: familyIdData.data as String?, addedOn: time, updatedOn: time,
                         itemPrice: double.parse(_priceController.text) , addedBy: uid, purchaseDate: purchaseDateInMillis,itemName: _nameController.text);
 
                     showProgressSnack(context, 'Adding Item');
@@ -371,13 +370,13 @@ class __BodyWidgetState extends State<_BodyWidget> {
                             //update family expense amount
                             Navigator.of(context).pop();
 
-                            var expenseData = await familyExpenseRef.doc(familyId.data).get();
+                            var expenseData = await familyExpenseRef.doc(familyIdData.data as String?).get();
                             if(expenseData.exists){
-                              familyExpenseRef.doc(familyId.data).update({ key_amount: ((expenseData.get(key_amount)) + item.itemPrice) , 'updatedAt': item.addedOn,
+                              familyExpenseRef.doc(familyIdData.data as String?).update({ key_amount: ((expenseData.get(key_amount)) + item.itemPrice) , 'updatedAt': item.addedOn,
                                 'remaining': ((expenseData.get('remaining')) + item.itemPrice)  });
                             }
                             else{
-                              familyExpenseRef.doc(familyId.data).set({ key_amount:  item.itemPrice , 'updatedAt': item.addedOn, 'remaining': item.itemPrice });
+                              familyExpenseRef.doc(familyIdData.data as String?).set({ key_amount:  item.itemPrice , 'updatedAt': item.addedOn, 'remaining': item.itemPrice });
                             }
                     });
 

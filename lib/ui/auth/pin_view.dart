@@ -2,8 +2,10 @@ import 'package:family_expense/utils/Utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+
+
 class PinEntryTextField extends StatefulWidget {
-  final String lastPin;
+  final String? lastPin;
   final int fields;
   final onSubmit;
   final fieldWidth;
@@ -28,23 +30,25 @@ class PinEntryTextField extends StatefulWidget {
 }
 
 class PinEntryTextFieldState extends State<PinEntryTextField> {
-  List<String> _pin;
-  List<FocusNode> _focusNodes;
-  List<TextEditingController> _textControllers;
+  late List<String?> _pin = [];
+  late List<FocusNode?> _focusNodes = [];
+  late List<TextEditingController?> _textControllers = [];
 
   Widget textfields = Container();
 
   @override
   void initState() {
     super.initState();
-    _pin = List<String>(widget.fields);
-    _focusNodes = List<FocusNode>(widget.fields);
-    _textControllers = List<TextEditingController>(widget.fields);
+    _pin = List.generate(widget.fields, (index) => null);
+    _focusNodes = List.generate(widget.fields, (index) => null);
+    _textControllers = List.generate(widget.fields, (index) => null);
+
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         if (widget.lastPin != null) {
-          for (var i = 0; i < widget.lastPin.length; i++) {
-            _pin[i] = widget.lastPin[i];
+          for (var i = 0; i < widget.lastPin!.length; i++) {
+            _pin[i] = widget.lastPin?[i]??'';
           }
         }
         textfields = generateTextFields(context);
@@ -54,7 +58,7 @@ class PinEntryTextFieldState extends State<PinEntryTextField> {
 
   @override
   void dispose() {
-    _textControllers.forEach((TextEditingController t) => t.dispose());
+    _textControllers.forEach((TextEditingController? t) => t?.dispose());
     super.dispose();
   }
 
@@ -75,7 +79,7 @@ class PinEntryTextFieldState extends State<PinEntryTextField> {
 
   void clearTextFields() {
     _textControllers.forEach(
-            (TextEditingController tEditController) => tEditController.clear());
+            (TextEditingController? tEditController) => tEditController?.clear());
     _pin.clear();
   }
 
@@ -86,15 +90,15 @@ class PinEntryTextFieldState extends State<PinEntryTextField> {
     if (_textControllers[i] == null) {
       _textControllers[i] = TextEditingController();
       if (widget.lastPin != null ) {
-        _textControllers[i].text = widget.lastPin[i];
+        _textControllers[i]?.text = widget.lastPin?[i]??'';
       }
     }
 
-    _focusNodes[i].addListener(() {
-      if (_focusNodes[i].hasFocus) {}
+    _focusNodes[i]?.addListener(() {
+      if (_focusNodes[i]!.hasFocus) {}
     });
 
-    final String lastDigit = _textControllers[i].text;
+    final String? lastDigit = _textControllers[i]?.text;
 
     return Center(
       child: Container(
@@ -115,30 +119,30 @@ class PinEntryTextFieldState extends State<PinEntryTextField> {
               counterText: "",
               border: widget.showFieldAsBox
                   ? OutlineInputBorder(borderSide: BorderSide(width: 2.0))
-                  : null),
+                  : OutlineInputBorder(borderSide: BorderSide(width: 1.0))),
           onChanged: (String str) {
             setState(() {
               _pin[i] = str;
             });
             if (i + 1 != widget.fields) {
-              _focusNodes[i].unfocus();
+              _focusNodes[i]?.unfocus();
               if (lastDigit != null && _pin[i] == '') {
                 FocusScope.of(context).requestFocus(_focusNodes[i - 1]);
               } else {
                 FocusScope.of(context).requestFocus(_focusNodes[i + 1]);
               }
             } else {
-              _focusNodes[i].unfocus();
+              _focusNodes[i]?.unfocus();
               if (lastDigit != null && _pin[i] == '') {
                 FocusScope.of(context).requestFocus(_focusNodes[i - 1]);
               }
             }
-            if (_pin.every((String digit) => digit != null && digit != '')) {
+            if (_pin.every((String? digit) => digit != null && digit != '')) {
               widget.onSubmit(_pin.join());
             }
           },
           onSubmitted: (String str) {
-            if (_pin.every((String digit) => digit != null && digit != '')) {
+            if (_pin.every((String? digit) => digit != null && digit != '')) {
               widget.onSubmit(_pin.join());
             }
           },

@@ -9,8 +9,8 @@ import 'package:grouped_list/grouped_list.dart';
 
 class ViewItemsWidget extends StatelessWidget {
 
-  final String familyId;
-  ViewItemsWidget({Key key, this.familyId}):super(key: key);
+  final String? familyId;
+  ViewItemsWidget({Key? key, this.familyId}):super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -38,23 +38,23 @@ class ViewItemsWidget extends StatelessWidget {
                         child: Center(child: textMessage('No Items found'),),
                       );
                     }
-                    var elements = snapshot.data.docs.map((e) => Item.fromJson(e.data())).toList();
+                    var elements = snapshot.data?.docs.map((e) => Item.fromJson(e.data()  as Map<String, dynamic>)).toList()??[];
                     var position = 0;
-                    elements.forEach((element) { print(formattedDate(element.purchaseDate));});
+                    // elements.forEach((element) { print(formattedDate(element.purchaseDate));});
 
 
                     return GroupedListView<Item, String>(
                       scrollDirection: Axis.vertical,
                       shrinkWrap: true,
                       elements: elements,
-                      groupBy: (element) => formattedDate(element.purchaseDate),
+                      groupBy: (element) => formattedDate(element.purchaseDate!),
                       groupSeparatorBuilder: (String groupByValue) { position=0;return Center(child: textMessage(groupByValue),);  },
                       itemBuilder: (BuildContext context, Item element) {
                         return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             child: bindPurchaseListItem(context, element, position++, false));
                       },
 
-                      itemComparator: (item1, item2) => item1.purchaseDate.compareTo(item2.purchaseDate), // optional
+                      itemComparator: (item1, item2) => item1.purchaseDate!.compareTo(item2.purchaseDate!), // optional
                       useStickyGroupSeparators: true,
                       // optional
                       floatingHeader: true,

@@ -9,7 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 class PaymentsWidget extends StatelessWidget {
 
-  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+  final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +17,7 @@ class PaymentsWidget extends StatelessWidget {
       appBar: AppBar(title: ralewayText('Payments'),),
       body: Container(
         child: FutureBuilder(
-          future: getPrefValue(uid),
+          future: getPrefValue(uid!),
           builder: (context, familySnapshot){
 
             if(familySnapshot.connectionState == ConnectionState.waiting)
@@ -36,7 +36,7 @@ class PaymentsWidget extends StatelessWidget {
                   return _bindList([]);
 
 
-                List<PaymentModel> list = payments.data.docs.map((e) => PaymentModel.fromJson(e.data())).toList();
+                List<PaymentModel> list = payments.data?.docs.map((e) => PaymentModel.fromJson(e.data()  as Map<String, dynamic>)).toList()??[];
 
                 return _bindList(list);
 
@@ -67,8 +67,8 @@ class PaymentsWidget extends StatelessWidget {
             leading: circleAvatar('${index+1}'),
             title:  loadName(payment.uid, GoogleFonts.raleway()),
             // subtitle: ralewayText(list[index].body == null ? '' : list[index].body == null, fontSize: 13),
-            subtitle: Text(('${formattedDate(payment.updatedOn)}'), style: Theme.of(context).textTheme.caption.copyWith(fontSize: 10, ),),
-            trailing: Text(('${getCurrency()} ${list[index].amount}'), style: Theme.of(context).textTheme.caption.copyWith(fontSize: 22, ),),
+            subtitle: Text(('${formattedDate(payment.updatedOn!)}'), style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 10, ),),
+            trailing: Text(('${getCurrency()} ${list[index].amount}'), style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 22, ),),
           ),
         );
       },

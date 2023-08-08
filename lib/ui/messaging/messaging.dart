@@ -19,14 +19,14 @@ import 'package:google_fonts/google_fonts.dart';
 class MessagingWidget extends StatelessWidget {
 
   // final ScrollController _listController = ScrollController();
-  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+  final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
 
   @override
   Widget build(BuildContext context) {
 
     return FutureBuilder(
-      future: getPrefValue(uid),
+      future: getPrefValue(uid!),
       builder: (context, familyId){
 
 
@@ -46,17 +46,17 @@ class MessagingWidget extends StatelessWidget {
             if(snapshot.connectionState == ConnectionState.waiting)
               return circularProgressBar;
 
-            if(!snapshot.hasData && snapshot.data.docs.isEmpty){
+            if(!snapshot.hasData && snapshot.data?.docs.isEmpty == true){
               return getPlaceholderWidget('You haven\'t joined any family yet\nTap to Join', svgAsset: 'people.svg');
             }
 
 
-            if(snapshot.data.docs.first.get('verified') == false){
+            if(snapshot.data!.docs.first.get('verified') == false){
               return getPlaceholderWidget('Please wait while someone verifies you...');
 
             }
 
-            return delayedWidget(1, _bindMessages(familyId.data));
+            return delayedWidget(1, _bindMessages(familyId.data.toString() ));
           },
         );
       },
@@ -77,9 +77,8 @@ class MessagingWidget extends StatelessWidget {
               if(!snapshot.hasData || snapshot.hasError)
                 return getPlaceholderWidget('No Messages here',  svgAsset: "chats.svg", height: 120);
 
-              print(snapshot.data.docs);
               print('----Binding Messages---');
-              List<MessageModel> messages = snapshot.data.docs.map((e) => MessageModel.fromJson(e.data())).toList();
+              List<MessageModel> messages = snapshot.data?.docs.map((e) => MessageModel.fromJson(e.data()  as Map<String, dynamic>)).toList()??[];
 
               return ListView.builder(
                 // controller: _listController,
@@ -103,9 +102,9 @@ class MessagingWidget extends StatelessWidget {
                             ),
                             child: Column(
                               children: [
-                                !isMine ? loadName(message.sentBy,  Theme.of(context).textTheme.caption.copyWith(color: Colors.redAccent,)) : SizedBox(),
+                                !isMine ? loadName(message.sentBy,  Theme.of(context).textTheme.bodySmall!.copyWith(color: Colors.redAccent,)) : SizedBox(),
                                 SizedBox(height: 1,),
-                                Text(message.message, style: GoogleFonts.raleway().copyWith(color: isMine ? Colors.white : Colors.black, fontSize: 16),),
+                                Text(message!.message!, style: GoogleFonts.raleway().copyWith(color: isMine ? Colors.white : Colors.black, fontSize: 16),),
                               ],
                               crossAxisAlignment: CrossAxisAlignment.start,
                             ),
@@ -113,7 +112,7 @@ class MessagingWidget extends StatelessWidget {
                         ),
                         SizedBox(height: 8),
                         Container(alignment: isMine ? Alignment.topRight : Alignment.topLeft,
-                            child: Text(formatDateWithFormatter(message.timestamp, 'd MMM yy hh:mm a'), style: Theme.of(context).textTheme.caption.copyWith(fontSize: 9, ),),margin: EdgeInsets.only(left: 20, right: 20, bottom: 8 ),)
+                            child: Text(formatDateWithFormatter(message.timestamp!, 'd MMM yy hh:mm a'), style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 9, ),),margin: EdgeInsets.only(left: 20, right: 20, bottom: 8 ),)
 
                       ],
                     );
@@ -135,21 +134,21 @@ class MessagingWidget extends StatelessWidget {
 
 class _messageInputLayout extends StatefulWidget {
 
-  final ScrollController listController;
-  _messageInputLayout({Key key, this.listController}):super(key: key);
+  final ScrollController? listController;
+  _messageInputLayout({Key? key,  this.listController}):super(key: key);
 
   @override
   __messageInputLayoutState createState() => __messageInputLayoutState();
 }
 
 class __messageInputLayoutState extends State<_messageInputLayout> {
-  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+  final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
-  String familyId ;
+  String? familyId ;
   @override
   void initState() {
     super.initState();
-    getPrefValue(uid).then((value) => familyId = value);
+    getPrefValue(uid!).then((value) => familyId = value);
 
   }
 
@@ -197,7 +196,7 @@ class __messageInputLayoutState extends State<_messageInputLayout> {
             child: Container(
               child: TextField(
                 onSubmitted: (value) {
-                  onSendMessage(_messagingController.text, 0, familyId);
+                  onSendMessage(_messagingController.text, 0, familyId!);
                 },
                 style: GoogleFonts.raleway().copyWith(fontSize: 18),
                 controller: _messagingController,
@@ -213,8 +212,8 @@ class __messageInputLayoutState extends State<_messageInputLayout> {
           // Button send message
           IconButton(
             icon: Icon(Icons.send),
-            onPressed: () => onSendMessage(_messagingController.text, 0, familyId),
-            color: Theme.of(context).accentColor,
+            onPressed: () => onSendMessage(_messagingController.text, 0, familyId!),
+            color: Theme.of(context).colorScheme.secondary,
           ),
         ],
       ),

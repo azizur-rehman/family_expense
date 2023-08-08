@@ -8,7 +8,7 @@ import 'package:flutter_xlider/flutter_xlider.dart';
 class SharingPercentWidget extends StatefulWidget {
 
   final List<FamilyMember> members;
-  SharingPercentWidget({Key key, this.members}):super(key: key);
+  SharingPercentWidget({Key? key, required this.members}):super(key: key);
 
   @override
   _SharingPercentWidgetState createState() => _SharingPercentWidgetState();
@@ -60,7 +60,7 @@ class _SharingPercentWidgetState extends State<SharingPercentWidget> {
                 shrinkWrap: true,
                 itemBuilder: (BuildContext context, int index){
                   FamilyMember member = widget.members[index];
-                  double sharing = double.tryParse(sharingPercent[member.uid].toString());
+                  double? sharing = double.tryParse(sharingPercent[member.uid].toString());
                   return Column(
                     children: [
                       SizedBox(height: 40,),
@@ -79,12 +79,12 @@ class _SharingPercentWidgetState extends State<SharingPercentWidget> {
                             sharingPercent[member.uid] = percent;
                             //set average for other members
                             var remainingValue = 100.0 - percent;
-                            List<String> otherMemberUids = sharingPercent.keys.where((e) => e != member.uid).toList();
+                            // List otherMemberUids = sharingPercent?.keys?.where((e) => e != member.uid.toString()).toList()??[];
                             double averageRemainingValue = remainingValue / (sharingPercent.keys.length - 1);
                             print('Average - $averageRemainingValue , remaining percent - $remainingValue, member - ${sharingPercent.length - 1}');
-                            otherMemberUids.forEach((id) {
-                              // sharingPercent[id] = num.parse(averageRemainingValue.toString());
-                            });
+                            // otherMemberUids.forEach((id) {
+                            //   // sharingPercent[id] = num.parse(averageRemainingValue.toString());
+                            // });
 
                           });
                         },

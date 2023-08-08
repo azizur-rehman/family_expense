@@ -18,12 +18,12 @@ class MyProfileWidget extends StatefulWidget {
 class _MyProfileWidgetState extends State<MyProfileWidget> {
 
   TextEditingController _nameController = TextEditingController();
-  final String uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.uid : null;
+  var uid = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser?.uid : null;
 
   @override
   void initState() {
     // FirebaseAuth.instance.currentUser.reload().then((value) =>
-    _nameController.text = FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser.displayName : null;
+    _nameController.text = (FirebaseAuth.instance.currentUser != null ? FirebaseAuth.instance.currentUser?.displayName : null)!;
     // );
 
     super.initState();
@@ -69,31 +69,31 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
                           if(!snapshot.hasData)
                             return circularProgressBar;
 
-                          var list = snapshot.data.docs.map((e) => Item.fromJson(e.data())).toList();
+                          var list = snapshot.data!.docs.map((e) => Item.fromJson(e!.data() as Map<String, dynamic>)).toList();
 
                           return Column(
                             children: [
 
                               ListTile(
                                 leading: ralewayText('Items purchased this month'),
-                                trailing: ralewayText('${list.where((e) => e.purchaseDate>=thisMonthStartMillis).length}'),
+                                trailing: ralewayText('${list.where((e) => e.purchaseDate!>=thisMonthStartMillis).length}'),
                               ),
 
                               ListTile(
                                 leading: ralewayText('Money spent this month'),
-                                trailing: ralewayText('${getCurrency()} ${list.where((e) => e.purchaseDate>=thisMonthStartMillis).toList().sumBy((e) => e.itemPrice)}'),
+                                trailing: ralewayText('${getCurrency()} ${list.where((e) => e.purchaseDate!>=thisMonthStartMillis).toList().sumBy((e) => e.itemPrice?.toDouble()??0.0)}'),
                               ),
 
                               SizedBox(height: 20,),
 
                               ListTile(
                                 leading: ralewayText('Total items purchased'),
-                                trailing: ralewayText('${snapshot.data.size}'),
+                                trailing: ralewayText('${snapshot.data?.size??0}'),
                               ),
 
                               ListTile(
                                 leading: ralewayText('Total money spent'),
-                                trailing: ralewayText('${getCurrency()} ${list.sumBy((e) => e.itemPrice)}'),
+                                trailing: ralewayText('${getCurrency()} ${list.sumBy((e) => e.itemPrice?.toDouble()??0.0)}'),
                               )
 
                             ],
@@ -147,8 +147,8 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
                         }
                         showProgressSnack(context, 'Updating your name');
 
-                        FirebaseAuth.instance.currentUser.updateProfile(displayName: name).then((value) {
-                          currentUser.reload();
+                        FirebaseAuth.instance.currentUser?.updateDisplayName(name).then((value) {
+                          currentUser?.reload();
                           print('Updating name to ${name} at ${userRef.doc(uid).path}, user = $currentUser');
                           userRef.doc(uid).update({'name': name}).then((value) {
                             hideSnackBar(context);
@@ -170,7 +170,7 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
 
             SizedBox(height: 50,),
 
-            FlatButton.icon(onPressed: ()async{
+            TextButton.icon(onPressed: ()async{
               var confirmation = await showConfirmDialog(context, 'Are you sure you want to logout?');
               if(!confirmation) return;
 
@@ -184,7 +184,9 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
                   ),
                   ModalRoute.withName("/HomwWidget")
               );
-            }, icon: Icon(Icons.logout), label: ralewayText('Logout'), padding: EdgeInsets.all(20),),
+            }, icon: Icon(Icons.logout), label: ralewayText('Logout'), style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.all(20)
+            ), ),
 
 
           ],

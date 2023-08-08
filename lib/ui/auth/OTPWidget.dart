@@ -14,16 +14,16 @@ class OTPWidget extends StatefulWidget {
 
   final String phone;
 
-  OTPWidget({Key key, this.phone}):super(key: key);
+  OTPWidget({Key? key, required this.phone}):super(key: key);
 
   @override
   _OTPWidgetState createState() => _OTPWidgetState();
 }
 
 class _OTPWidgetState extends State<OTPWidget> {
-  String otp;
+  String? otp;
 
-  String verificationId;
+  String? verificationId;
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +58,7 @@ class _OTPWidgetState extends State<OTPWidget> {
 
           SizedBox(height: 80,),
 
-          FlatButton(onPressed:(){
+          TextButton(onPressed:(){
             sendOTP(widget.phone);
           }, child: Text('Resend OTP'),),
 
@@ -78,13 +78,13 @@ class _OTPWidgetState extends State<OTPWidget> {
                     return;
                   }
 
-                   verifyOTP(otp, verificationId)
+                   verifyOTP(otp!, verificationId!)
                       .then((userCredential) {
                       //save user data
                      print('Verified OTP , user - ${userCredential.user}');
-                     String name = userCredential.user.displayName;
+                     String name = userCredential?.user?.displayName??'';
                      if(currentUser!=null)
-                     currentUser.reload().then((value) => moveToPage(context, CreateUserWidget(name: name,)));
+                     currentUser?.reload().then((value) => moveToPage(context, CreateUserWidget(name: name,)));
                      else moveToPage(context, CreateUserWidget(name: name,));
                   }
                   ).catchError((onError)=> Fluttertoast.showToast(msg: onError.toString()));
@@ -119,7 +119,7 @@ class _OTPWidgetState extends State<OTPWidget> {
         Fluttertoast.showToast(msg: "Error : ${e.code}");
       },
 
-      codeSent: (String verificationId, int resendToken) {
+      codeSent: (String verificationId, int? resendToken) {
         Fluttertoast.showToast(msg: "OTP sent to $phone");
         this.verificationId = verificationId;
       },
@@ -131,8 +131,8 @@ class _OTPWidgetState extends State<OTPWidget> {
 
     Future<UserCredential> verifyOTP(String otp, String verificationId)async{
 
-        if(verificationId == null)
-          return null;
+        // if(verificationId == null)
+        //   return null;
 
       var phoneAuth = PhoneAuthProvider.credential(verificationId: verificationId, smsCode: otp);
       return await FirebaseAuth.instance.signInWithCredential(phoneAuth);
@@ -145,14 +145,14 @@ class CreateUserWidget extends StatelessWidget {
 
   TextEditingController _nameController = TextEditingController();
   var isInserting = false;
-  final String name;
-  CreateUserWidget({Key key, this.name}):super(key: key);
+  final String? name;
+  CreateUserWidget({Key? key, this.name}):super(key: key);
 
   @override
   Widget build(BuildContext context) {
 
     try{
-      _nameController.text = name;
+      _nameController.text = name??'';
     }
     catch(e){
 
@@ -203,19 +203,21 @@ class CreateUserWidget extends StatelessWidget {
                 if(currentUser == null){
                   Navigator.pop(context);
                   Fluttertoast.showToast(msg: 'Something went wrong');
+                  return;
                 }
-                String uid = currentUser.uid;
+                String uid = currentUser!.uid;
 
                 print(currentUser);
 
                 UserData user = UserData(uid:uid, name: _nameController.text,
-                    phone: currentUser.phoneNumber,
+                    phone: currentUser?.phoneNumber,
                     createdAt: DateTime.now().millisecondsSinceEpoch, updatedOn: DateTime.now().millisecondsSinceEpoch);
 
                 showProgressSnack(context, 'Updating...');
-                FirebaseAuth.instance.currentUser.updateProfile(displayName: _nameController.text)
+                FirebaseAuth.instance.currentUser?.updateDisplayName( _nameController.text)
                     .then((value) {
-                  currentUser.reload();
+
+                  currentUser?.reload();
 
                   userRef.doc(uid).set(user.toJson()).then((value)async {
 
