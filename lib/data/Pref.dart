@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:country_codes/country_codes.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -11,6 +13,13 @@ void saveKey(String key, String value) {
     pref.setString(key, value)
 
   });
+}
+
+Future<bool> saveKeyAsync(String key, String value)async {
+
+  final pref = await getPref();
+  return await pref.setString(key, value);
+
 }
 
 Future<String?> getPrefValue(String key)async{

@@ -25,8 +25,41 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
     // TODO: implement initState
     super.initState();
     FirebaseAuth.instance.currentUser?.reload();
+
+    _joinEditingController.text = "";
+
+    _loadExistingFamily();
   }
 
+  _loadExistingFamily()async{
+
+
+    try {
+      var familyMemberSnapshot = await familyMemberRef
+          .where('uid', isEqualTo: uid!)
+      // .doc(uid!)
+          .get();
+
+
+      FamilyMember? alreadyMember = FamilyMember.fromJson(
+          familyMemberSnapshot.docs.first.data());
+
+      var familySnapshot = await familyRef.doc(alreadyMember.familyId).get();
+
+      Family? family = Family.fromJson(familySnapshot.data()!);
+
+      print('family code => ${family.code}');
+
+      setState(() {
+        _joinEditingController.text = family.code??'';
+      });
+    }
+    catch(e){
+      print(e);
+    }
+
+    // .then((value) =>)
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +91,40 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
                 Text('Or', style: TextStyle().copyWith(fontSize: 24,  fontWeight: FontWeight.w200),),
 
               SizedBox(height: 40,),
+
+              // FutureBuilder<QuerySnapshot>(
+              //     future: familyMemberRef
+              //         .where('uid', isEqualTo: '8I3ITwRAHtMbEFZchFTLp9Z7nPw2'!)
+              //         // .doc(uid!)
+              //         .get(),
+              //     builder: (context, snapshot) {
+              //       print(uid!);
+              //
+              //       snapshot.data?.docs?.forEach((element) { print(element.data() as Map<String,dynamic>);});
+              //       if (snapshot.hasData) {
+              //         FamilyMember? alreadyMember = FamilyMember.fromJson(snapshot.data?.docs.first.data() as Map<String,dynamic>);
+              //         //find family code
+              //         FutureBuilder(
+              //             future: familyRef.doc(alreadyMember.familyId).get(),
+              //             builder: (BuildContext context,
+              //                 AsyncSnapshot snapshot) {
+              //               if (snapshot.hasData) {
+              //                 return widgetToBuild;
+              //               } else if (snapshot.hasError) {
+              //                 return Icon(Icons.error_outline);
+              //               } else {
+              //                 return CircularProgressIndicator();
+              //               }
+              //             })
+              //         ;
+              //         return SizedBox();
+              //       } else if (snapshot.hasError) {
+              //         return Icon(Icons.error_outline);
+              //       } else {
+              //         return CircularProgressIndicator();
+              //       }
+              //     }),
+
               TextField(
                 controller: _joinEditingController,
                   style: TextStyle().copyWith(fontSize: 30, fontWeight: FontWeight.w500 ),
@@ -100,7 +167,7 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
                     if(familyMemberSnapshot.size > 0){
                       //already in the family
                       FamilyMember member = FamilyMember.fromJson(familyMemberSnapshot.docs.first.data());
-                      saveKey(uid!, familyId);
+                      await saveKeyAsync(uid!, familyId);
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       Navigator.pushAndRemoveUntil(
                           context, MaterialPageRoute(builder: (context) => HomeWidget()),
@@ -111,14 +178,14 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
                     else{
                       //add as a member
                       familyMemberRef.doc(uid).set(FamilyMember(uid: uid, familyId: familyId, moderator: false, verified: false, name: currentUser?.displayName).toJson())
-                          .then((value) {
+                          .then((value) async {
                         Fluttertoast.showToast(msg: 'Your family Request is being sent to the moderator');
                         //add notification
                         notificationRef.add(NotificationData(from: uid, familyId: familyId,
                             createdAt: DateTime.now().millisecondsSinceEpoch,
                             title: '${currentUser?.displayName} wants to join the family').toJson());
 
-                        saveKey(uid!, familyId);
+                        await saveKeyAsync(uid!, familyId);
                         //clear and navigate to stack
                         Navigator.pushAndRemoveUntil(
                             context,

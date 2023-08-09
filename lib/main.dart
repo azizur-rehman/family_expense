@@ -24,8 +24,20 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      darkTheme: ThemeData.dark().copyWith(colorScheme: ColorScheme.dark(secondary: Colors.lightBlueAccent,)),
-      theme: ThemeData.light().copyWith(colorScheme: ColorScheme.dark(secondary: Colors.lightBlueAccent)),
+      darkTheme: ThemeData.dark().copyWith(
+          colorScheme: ColorScheme.dark(secondary: Colors.lightBlueAccent,),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            textStyle: TextStyle(color:Colors.lightBlueAccent,)
+          )
+        )
+      ),
+      theme: ThemeData.light().copyWith(colorScheme: ColorScheme.dark(secondary: Colors.lightBlueAccent),
+          textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                  textStyle: TextStyle(color:Colors.lightBlueAccent )
+              )
+          )),
       // ui.home: LandingPage()
       home: LandingPage(),
     );
