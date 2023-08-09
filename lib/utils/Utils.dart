@@ -106,10 +106,11 @@ Widget bindPurchaseListItem(BuildContext context, Item item, int index, bool req
     startActionPane: ActionPane(motion: ScrollMotion(), children: [
         SlidableAction(
       // caption: 'Remove',
-      foregroundColor: Colors.transparent,
+      backgroundColor: Colors.transparent,
+
       icon: Icons.delete, //Icon(Icons.delete, color: getBlackWhiteColorWithTheme(context) ,),
-      onPressed: (context)async {
-        var confirm = await showConfirmDialog(context, 'Would you like to delete this item?');
+      onPressed: (ctx)async {
+        bool confirm = await showConfirmDialog(context, 'Would you like to delete this item?');
         if(!confirm) return;
 
         showProgressSnack(context, 'Removing Item');
@@ -132,10 +133,10 @@ Widget bindPurchaseListItem(BuildContext context, Item item, int index, bool req
 
         SlidableAction(
         // caption: 'Edit',
-        foregroundColor: Colors.transparent,
+          backgroundColor: Colors.transparent,
         // color: Colors.green,
         icon:  Icons.edit_outlined, // Icon(Icons.edit_outlined , color: getBlackWhiteColorWithTheme(context),),
-        onPressed: (context)async {
+        onPressed: (ctx)async {
           var familyId = await getPrefValue(uid!);
           moveToPage(context, AddItemDialogWidget(familyId: familyId, item: item,));
         },
@@ -170,6 +171,7 @@ Future<bool> showConfirmDialog(BuildContext context, String message)async{
     content: Text(message),
     textOK: Text('Yes'),
     textCancel: Text('No'),
+
   );
 }
 

@@ -203,13 +203,13 @@ class _FamilyWidgetState extends State<FamilyWidget> {
 
                                     SlidableAction(
                                       onPressed: (context) => _removeMember(member),
-                                      backgroundColor: Colors.red,
-                                      foregroundColor: Colors.white,
+
+                                      backgroundColor: Colors.transparent,
                                       icon: Icons.delete,
                                       label: 'Remove',
                                     ),
                                     SlidableAction(
-                                      onPressed: (context) async{
+                                      onPressed: (ctx) async{
 
                                         if(isAmModerator) {
                                           var confirm = await showConfirmDialog(context, member.moderator! ? 'Remove this user from moderator?' : 'Make this user as moderator?');
@@ -221,8 +221,8 @@ class _FamilyWidgetState extends State<FamilyWidget> {
                                         else
                                           showSnackBar(context, 'You are not authorized to do this');
                                       },
-                                      backgroundColor: Colors.green,
-                                      foregroundColor: Colors.white,
+
+                                      backgroundColor: Colors.transparent,
                                       icon: Icons.person_outline_rounded,
                                       label: '${member.moderator! ? 'Remove' : 'Make' } Moderator',
                                     ),
