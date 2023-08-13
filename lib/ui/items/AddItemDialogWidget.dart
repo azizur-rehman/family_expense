@@ -35,37 +35,40 @@ class AddItemDialogWidget extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: ralewayText('Add item'),),
-      body: Column(
-        children: [
+      body: SingleChildScrollView(
+        physics: BouncingScrollPhysics(),
+        child: Column(
+          children: [
 
-          FutureBuilder<QuerySnapshot>(
-              future: query.get(),
-              builder: (context, snapshot){
-
-
-                if(snapshot.connectionState == ConnectionState.waiting)
-                  return Center( child: circularProgressBar);
-
-                if(!snapshot.hasData || snapshot.hasError)
-                  return getPlaceholderWidget('You are not allowed to add items. Contact the moderator');
-
-                return FutureBuilder<QuerySnapshot>(
-                  future: itemRef.orderBy('purchaseDate', descending: true).where(key_familyId, isEqualTo: familyId).get(),
-                  builder: (context, itemSnapshot){
-
-                    if(itemSnapshot.hasData){
-                      List<Item> items = itemSnapshot.data?.docs.map((e) => Item.fromJson(e.data() as Map<String, dynamic>)).toList()??[];
-                      return _BodyWidget(familyId: familyId, item: item, lastPurchasedItems: items,);
-                    }
-
-                    return _BodyWidget(familyId: familyId, item: item, lastPurchasedItems: [],);
-                  },
-                );
-            }
-          )
+            FutureBuilder<QuerySnapshot>(
+                future: query.get(),
+                builder: (context, snapshot){
 
 
-        ],
+                  if(snapshot.connectionState == ConnectionState.waiting)
+                    return Center( child: circularProgressBar);
+
+                  if(!snapshot.hasData || snapshot.hasError)
+                    return getPlaceholderWidget('You are not allowed to add items. Contact the moderator');
+
+                  return FutureBuilder<QuerySnapshot>(
+                    future: itemRef.orderBy('purchaseDate', descending: true).where(key_familyId, isEqualTo: familyId).get(),
+                    builder: (context, itemSnapshot){
+
+                      if(itemSnapshot.hasData){
+                        List<Item> items = itemSnapshot.data?.docs.map((e) => Item.fromJson(e.data() as Map<String, dynamic>)).toList()??[];
+                        return _BodyWidget(familyId: familyId, item: item, lastPurchasedItems: items,);
+                      }
+
+                      return _BodyWidget(familyId: familyId, item: item, lastPurchasedItems: [],);
+                    },
+                  );
+              }
+            )
+
+
+          ],
+        ),
       ),
     );
   }
@@ -122,12 +125,16 @@ class __BodyWidgetState extends State<_BodyWidget> {
         onStatus: _statusListener, debugLogging: true)
         .then((value) => isSpeechAvailable = value);
 
-    if(widget.item != null){
-      purchaseDateInMillis = widget.item!.purchaseDate!;
-      _nameController.text = widget.item!.itemName!;
-      _priceController.text = widget.item!.itemPrice.toString();
+    try {
+      if (widget.item != null) {
+        purchaseDateInMillis = widget.item!.purchaseDate!;
+        _nameController.text = widget.item!.itemName!;
+        _priceController.text = widget.item!.itemPrice.toString();
+      }
     }
-
+    catch(e){
+      print(e);
+    }
 
     if(widget.lastPurchasedItems.isNotEmpty){
 

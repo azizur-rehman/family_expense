@@ -22,7 +22,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:in_app_update/in_app_update.dart';
 import 'package:intl/intl.dart';
+import 'package:month_year_picker/month_year_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
@@ -90,7 +92,7 @@ class _HomeWidgetState extends State<HomeWidget> {
             // splashColor: Colors.white,
             onPressed: () {
               if(isUserVerified)
-                moveToPage(context, AddItemDialogWidget(familyId: familyId, item: null,));
+                moveToPage(context, AddItemDialogWidget(familyId: familyId,));
               else
                 showSnackBar(context, 'You can only add items as soon as you get verified');
             } ,
@@ -351,7 +353,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                         List<PaymentModel> payments = [];
                         Map maxCollection = Map<String,num>();
                         try{
-                          payments = paymentSnapshot.data!.docs.map((e) => PaymentModel.fromJson(e.data() as Map<String, dynamic>)).toList();
+                          payments = paymentSnapshot.data?.docs.map((e) => PaymentModel.fromJson(e.data() as Map<String, dynamic>)).toList()??[];
                         }catch(e){ }
 
                         num allPaymentsCollected = 0.0;
@@ -367,7 +369,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
                           maxCollection[member.uid] = bal;
 
-                          return PieChartData('${member.name!.capitalize()}', bal, randomColor());
+                          return PieChartData('${member.name?.capitalize()??'Family Member'}', bal, randomColor());
                         }).toList() ;
 
 
@@ -380,7 +382,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                                     tooltipBehavior: TooltipBehavior(enable: true, format: 'point.x : ${getCurrency()} point.y'),
                                     // title: ChartTitle(text: 'Balance', textStyle: GoogleFonts.raleway()),
                                     enableMultiSelection: true,
-                                    legend: Legend(isVisible: true, position: LegendPosition.auto, orientation: LegendItemOrientation.auto),
+                                    legend: Legend(textStyle: TextStyle(color: getBlackWhiteColorWithTheme(context)), isVisible: true, position: LegendPosition.auto, orientation: LegendItemOrientation.auto),
 
                                     series: <CircularSeries>[
                                       // Renders doughnut chart
@@ -405,18 +407,18 @@ class _HomeWidgetState extends State<HomeWidget> {
 
                               ListTile(
                                 leading: ralewayText('Total Spent', fontSize: 13),
-                                trailing:  Text('${getCurrency()} ${totalExpense.roundToDouble()}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w300),),
+                                trailing:  Text('${formatMoney(totalExpense.roundToDouble().toString())}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w300),),
                               ),
 
                               ListTile(
                                 leading: ralewayText('Unpaid', fontSize: 13),
-                                trailing:  Text('${getCurrency()} ${totalExpense - allPaymentsCollected}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w300),),
+                                trailing:  Text('${formatMoney((totalExpense - allPaymentsCollected).toString())}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w300),),
                               ),
 
                               memberList.any((e) => e.uid == uid && e.sharePercent! > 0.0) ?
                               ListTile(
                                 leading: ralewayText('My Balance',),
-                                trailing:  Text('${getCurrency()} ${maxCollection[uid]}', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w300),),
+                                trailing:  Text('${formatMoney(maxCollection[uid].toString())}', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w300),),
                               ) : SizedBox(),
 
                               Divider(),
@@ -487,24 +489,34 @@ class _HomeWidgetState extends State<HomeWidget> {
              textMessage('Showing Graph'),
              DropdownButton<ChartType>(
                underline: SizedBox(),
-
+               icon: Icon(Icons.keyboard_arrow_down_sharp),
                value: _chartCurrentType,
                items: ChartType.values.map((e) => DropdownMenuItem(child: textMessage((e != ChartType.MONTHLY) ?_getChartTitle(e) : 'Monthly'), value: e,)).toList(),
                onChanged: (ChartType? type){
 
-                 if(type == ChartType.MONTHLY)
-                   showMonthPicker(
-                       context: context,
-                       firstDate: DateTime(DateTime.now().year - 5),
-                       lastDate: DateTime(DateTime.now().year ),
-                       initialDate: DateTime.now())
-                       .then((date) => date!= null && date.millisecondsSinceEpoch <= DateTime.now().millisecondsSinceEpoch ? setState(() {
+                 if(type == ChartType.MONTHLY) {
+                  showMonthPicker(
+                          context: context,
+                          firstDate: DateTime(DateTime.now().year - 5),
+                          lastDate: DateTime(DateTime.now().year),
+                          initialDate: DateTime.now()
+                  )
+                      .then((date) => date != null &&
+                              date.millisecondsSinceEpoch <=
+                                  DateTime.now().millisecondsSinceEpoch
+                          ? setState(() {
+                              _selectedDate = date;
+                              _chartCurrentType = type!;
+                            })
+                          : null);
 
-                     _selectedDate = date;
-                     _chartCurrentType = type!;
-                   }) : null);
-                 else
-                   setState(() {_chartCurrentType = type??ChartType.THIS_MONTH; });
+
+                } else
+                   setState(() {
+
+                     _chartCurrentType = type??ChartType.THIS_MONTH;
+
+                   });
                },
              )
            ],
@@ -602,14 +614,28 @@ class _HomeWidgetState extends State<HomeWidget> {
            //year wise graph
            interval.forEach((startMillis, endMillis) {
 
-             num sum;
+             num? sum;
              try {
-               sum = items!.map((e) =>
-               e.purchaseDate! >= startMillis && e.purchaseDate! <= endMillis ? e
-                   .itemPrice : 0.0).reduce((item1, item2) {
-                 return item1!.toDouble() + item2!.toDouble();
-               })!;
+               // sum = items!.map((e) =>
+               // e.purchaseDate! >= startMillis && e.purchaseDate! <= endMillis ? e
+               //     .itemPrice : 0.0)
+               //     .reduce((item1, item2) {
+               //   return item1!.toDouble() + item2!.toDouble();
+               // })!
+
+               sum = items!.toList().sumBy((e) {
+
+                 return ((e.purchaseDate! >= startMillis && e.purchaseDate! < endMillis) ? e.itemPrice : 0.0)!.toDouble();
+
+               });
+                 //   .reduce((item1, item2) {
+                 // return item1!.toDouble() + item2!.toDouble();
+               // }
+               // )!
+               // ;
              }catch(e){ sum = 0.0; }
+
+             // var sum = items?.toList().sumBy((element) => element.itemPrice??0.0)??0.0;
 
              totalPerMonth.add(sum);
              // var average = (sum/count).round();
@@ -645,50 +671,69 @@ class _HomeWidgetState extends State<HomeWidget> {
     //
     // print('max - $max - $min');
 
-     return SfCartesianChart(
-         enableAxisAnimation: true,
-         plotAreaBorderWidth: 0,
-         zoomPanBehavior: ZoomPanBehavior(
-           enablePanning: true,
-         ),
-         margin: EdgeInsets.only(top: 20, bottom: 10, left: 0),
-         title: ChartTitle(text: title, textStyle: GoogleFonts.raleway()),
-         tooltipBehavior: TooltipBehavior(
-           enable: true,
-         ),
-         primaryYAxis: NumericAxis(isVisible: false, labelFormat: '${getCurrency()} {value}' ,
-             // visibleMaximum: max,
-             // visibleMinimum: min,
-             rangePadding: ChartRangePadding.normal),
-         primaryXAxis: CategoryAxis(
-           majorGridLines: MajorGridLines(width: 0,), minorTicksPerInterval:0,tickPosition: TickPosition.outside,
-             majorTickLines: MajorTickLines(width:0, ), interval: 1
+    final totalAmount = salesList.sumBy((element) => element.expense);
+    print('Total Amont Spent => $totalAmount');
 
+     return Column(
+       children: [
+         Row(
+           children: [
+             Expanded(child: textMessage('Total Expenses :')),
+             Padding(
+               padding: const EdgeInsets.all(8.0),
+               child: Text(formatMoney(totalAmount.toString()), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w200),),
+             ),
+           ],
          ),
+         SfCartesianChart(
+             enableAxisAnimation: true,
+             plotAreaBorderWidth: 0,
 
-         series: <ChartSeries>[
-           // Renders spline chart
-           SplineAreaSeries<SalesData, String>(
-             // color: Colors.blue,
-               enableTooltip: true,
-               opacity: isDarkMode(context) ? 0.4 : 0.8,
-               name: 'Expenses',
-               gradient: LinearGradient(
-                 // begin: Alignment.topLeft,
-                 // end: Alignment(0.8, 0.0), // 10% of the width, so there are ten blinds.
-                 colors: [
-                   Color.fromRGBO(0, 198, 255, 1),
-                   Color.fromRGBO(0, 114, 255, 1),
-                   // Color.fromRGBO(0, 114, 255, 1),
-                 ], // red to yellow// repeats the gradient over the canvas
-               ),
-               borderWidth: 2,
-               borderColor: Colors.blue,
-               dataSource:  salesList,
-               yValueMapper: (SalesData sales, _) => sales.expense,
-               xValueMapper: (SalesData sales, num index) => sales.month
-           )
-         ]
+             zoomPanBehavior: ZoomPanBehavior(
+               enablePanning: true,
+             ),
+             margin: EdgeInsets.only(top: 20, bottom: 10, left: 0),
+
+             title: ChartTitle(text: title, textStyle: GoogleFonts.raleway()),
+
+             tooltipBehavior: TooltipBehavior(
+               enable: true,
+             ),
+             primaryYAxis: NumericAxis(isVisible: false, labelFormat: '${getCurrency()} {value}' ,
+                 // visibleMaximum: max,
+                 // visibleMinimum: min,
+                 rangePadding: ChartRangePadding.normal),
+             primaryXAxis: CategoryAxis(
+               majorGridLines: MajorGridLines(width: 0,), minorTicksPerInterval:0,tickPosition: TickPosition.outside,
+                 majorTickLines: MajorTickLines(width:0, ), interval: 1
+
+             ),
+
+             series: <ChartSeries>[
+               // Renders spline chart
+               SplineAreaSeries<SalesData, String>(
+                 // color: Colors.blue,
+                   enableTooltip: true,
+                   opacity: isDarkMode(context) ? 0.4 : 0.8,
+                   name: 'Expenses',
+                   gradient: LinearGradient(
+                     // begin: Alignment.topLeft,
+                     // end: Alignment(0.8, 0.0), // 10% of the width, so there are ten blinds.
+                     colors: [
+                       Color.fromRGBO(0, 198, 255, 1),
+                       Color.fromRGBO(0, 114, 255, 1),
+                       // Color.fromRGBO(0, 114, 255, 1),
+                     ], // red to yellow// repeats the gradient over the canvas
+                   ),
+                   borderWidth: 2,
+                   borderColor: Colors.blue,
+                   dataSource:  salesList,
+                   yValueMapper: (SalesData sales, _) => sales.expense,
+                   xValueMapper: (SalesData sales, num index) => sales.month
+               )
+             ]
+         ),
+       ],
      );
    }
 

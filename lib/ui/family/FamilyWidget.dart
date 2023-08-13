@@ -7,6 +7,7 @@ import 'package:family_expense/ui/family/invite_family_member.dart';
 import 'package:family_expense/ui/family/sharing_percentage.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -105,7 +106,7 @@ class _FamilyWidgetState extends State<FamilyWidget> {
 
                             ListTile(
                               leading: ralewayText('Money spent this month'),
-                              trailing: ralewayText('${getCurrency()} ${list.where((e) => e.purchaseDate!>=thisMonthStartMillis).toList().sumBy((e) => e.itemPrice!)}'),
+                              trailing: ralewayText('${formatMoney(list.where((e) => e.purchaseDate!>=thisMonthStartMillis).toList().sumBy((e) => e.itemPrice!).toString())}'),
                             ),
 
                             SizedBox(height: 20,),
@@ -117,7 +118,7 @@ class _FamilyWidgetState extends State<FamilyWidget> {
 
                             ListTile(
                               leading: ralewayText('Total money spent'),
-                              trailing: ralewayText('${getCurrency()} ${list.sumBy((e) => e.itemPrice!)}'),
+                              trailing: ralewayText('${formatMoney(list.sumBy((e) => e.itemPrice!).toString())}'),
                             )
 
                           ],
@@ -199,11 +200,13 @@ class _FamilyWidgetState extends State<FamilyWidget> {
                                 print('memeber name => ${member.name}');
 
                                 return Slidable(
+                                  dragStartBehavior: DragStartBehavior.start,
                                   startActionPane: ActionPane(motion: ScrollMotion(), children: member.uid != uid ? [
 
                                     SlidableAction(
                                       onPressed: (context) => _removeMember(member),
 
+                                      foregroundColor: Theme.of(context).primaryColor,
                                       backgroundColor: Colors.transparent,
                                       icon: Icons.delete,
                                       label: 'Remove',
@@ -222,6 +225,7 @@ class _FamilyWidgetState extends State<FamilyWidget> {
                                           showSnackBar(context, 'You are not authorized to do this');
                                       },
 
+                                      foregroundColor: Theme.of(context).primaryColor,
                                       backgroundColor: Colors.transparent,
                                       icon: Icons.person_outline_rounded,
                                       label: '${member.moderator! ? 'Remove' : 'Make' } Moderator',
@@ -230,9 +234,16 @@ class _FamilyWidgetState extends State<FamilyWidget> {
                                   ]:[]),
 
                                   child: ListTile(
-                                    leading: loadNameAvatar(member.uid!),
-                                    title: Text(member.name??'Family Member', style:Theme.of(context).textTheme.subtitle1),
-                                    subtitle: _getListSubtitle(member),
+                                    leading: circleAvatar(getStringInitials(member.name??'Family Member')),
+                                    title: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                      mainAxisSize: MainAxisSize.max,
+                                      children: [
+                                        Text(member.name??'Family Member', style:Theme.of(context).textTheme.subtitle1),
+                                         _getListSubtitle(member),
+                                      ],
+                                    ),
 
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,

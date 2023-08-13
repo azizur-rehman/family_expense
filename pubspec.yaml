@@ -42,7 +42,7 @@ dependencies:
   fl_chart: ^0.63.0
   syncfusion_flutter_charts: ^22.2.7
   random_string: ^2.3.1
-  intl: ^0.18.1
+  intl: ^0.18.0
   grouped_list: ^5.1.2
   flutter_slidable: ^3.0.0
   confirm_dialog: ^1.0.2
@@ -57,6 +57,9 @@ dependencies:
   collection: ^1.17.1
   speech_to_text: ^6.3.0
   material_floating_search_bar_2: ^0.5.0
+  firebase_ui_firestore: ^1.5.6
+  month_year_picker: ^0.3.0+1
+  in_app_update: ^4.1.4
 #  barcode_scan: ^0.0.4
 #  qr_flutter: ^1.1.1
 #  flutter_cupertino_date_picker: ^1.0.26+2

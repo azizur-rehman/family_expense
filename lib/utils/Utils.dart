@@ -102,12 +102,14 @@ String formatDateWithFormatter(int millis, String format) => DateFormat(format).
 Widget bindPurchaseListItem(BuildContext context, Item item, int index, bool requireDate){
   final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
+  print(item.addedBy);
+
   return Slidable(
     startActionPane: ActionPane(motion: ScrollMotion(), children: [
         SlidableAction(
       // caption: 'Remove',
       backgroundColor: Colors.transparent,
-
+      foregroundColor: Theme.of(context).primaryColor,
       icon: Icons.delete, //Icon(Icons.delete, color: getBlackWhiteColorWithTheme(context) ,),
       onPressed: (ctx)async {
         bool confirm = await showConfirmDialog(context, 'Would you like to delete this item?');
@@ -134,6 +136,7 @@ Widget bindPurchaseListItem(BuildContext context, Item item, int index, bool req
         SlidableAction(
         // caption: 'Edit',
           backgroundColor: Colors.transparent,
+          foregroundColor: Theme.of(context).primaryColor,
         // color: Colors.green,
         icon:  Icons.edit_outlined, // Icon(Icons.edit_outlined , color: getBlackWhiteColorWithTheme(context),),
         onPressed: (ctx)async {
@@ -149,7 +152,7 @@ Widget bindPurchaseListItem(BuildContext context, Item item, int index, bool req
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('${getCurrency()} ${item.itemPrice.toString()}', style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w300, fontSize: 22),),
+          Text('${formatMoney(item.itemPrice.toString())}', style: Theme.of(context).textTheme.bodySmall!.copyWith(fontWeight: FontWeight.w300, fontSize: 22),),
           if(requireDate) Text(formattedDate(item.purchaseDate!), style: Theme.of(context).textTheme.labelSmall,) else SizedBox()
         ],
       ),
@@ -222,4 +225,20 @@ Widget delayedWidget(int durationInSeconds, Widget widget){
   return FutureBuilder(future: Future.delayed(Duration(seconds: durationInSeconds),),
       builder: (c,s) => s.connectionState == ConnectionState.done ? widget : circularProgressBar);
 
+}
+
+
+String formatMoney(String price) {
+  var value = price;
+
+  final formatter = new NumberFormat("#,##0.00", "en_US");
+
+  value = formatter.format(double.tryParse(price));
+  // if (price.length > 2) {
+  //   value = value.replaceAll(RegExp(r'\D'), '');
+  //   value = value.replaceAll(RegExp(r'\B(?=(\d{3})+(?!\d))'), ',');
+  //   // return value;
+  // }
+
+  return getCurrency() + ' ' +value;
 }

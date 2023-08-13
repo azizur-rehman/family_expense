@@ -25,6 +25,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       darkTheme: ThemeData.dark().copyWith(
+        brightness: Brightness.dark,
           colorScheme: ColorScheme.dark(secondary: Colors.lightBlueAccent,),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
         )
       ),
       theme: ThemeData.light().copyWith(colorScheme: ColorScheme.dark(secondary: Colors.lightBlueAccent),
+          brightness: Brightness.light,
           textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
                   textStyle: TextStyle(color:Colors.lightBlueAccent )

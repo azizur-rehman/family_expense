@@ -3,12 +3,14 @@ import 'package:family_expense/data/Firebase.dart';
 import 'package:family_expense/data/Pref.dart';
 import 'package:family_expense/model/Models.dart';
 import 'package:family_expense/ui/auth/LoginMainWidget.dart';
+import 'package:family_expense/ui/profile/check_for_update.dart';
 import 'package:family_expense/utils/Utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:family_expense/utils/extensions/Extensions.dart';
+import 'package:in_app_update/in_app_update.dart';
 
 class MyProfileWidget extends StatefulWidget {
   @override
@@ -81,7 +83,7 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
 
                               ListTile(
                                 leading: ralewayText('Money spent this month'),
-                                trailing: ralewayText('${getCurrency()} ${list.where((e) => e.purchaseDate!>=thisMonthStartMillis).toList().sumBy((e) => e.itemPrice?.toDouble()??0.0)}'),
+                                trailing: ralewayText('${formatMoney(list.where((e) => e.purchaseDate!>=thisMonthStartMillis).toList().sumBy((e) => e.itemPrice?.toDouble()??0.0).toString())}'),
                               ),
 
                               SizedBox(height: 20,),
@@ -93,7 +95,7 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
 
                               ListTile(
                                 leading: ralewayText('Total money spent'),
-                                trailing: ralewayText('${getCurrency()} ${list.sumBy((e) => e.itemPrice?.toDouble()??0.0)}'),
+                                trailing: ralewayText('${formatMoney(list.sumBy((e) => e.itemPrice?.toDouble()??0.0).toString())}'),
                               )
 
                             ],
@@ -168,6 +170,16 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
               ),
             ),
 
+            // SizedBox(height: 20,),
+            //
+            // TextButton(onPressed: ()async{
+            //   moveToPage(context, CheckForUpdateScreen());
+            // },
+            //   child: Text('Check For Update'),
+            //
+            // ),
+
+
             SizedBox(height: 50,),
 
             TextButton.icon(onPressed: ()async{
@@ -182,7 +194,7 @@ class _MyProfileWidgetState extends State<MyProfileWidget> {
                   MaterialPageRoute(
                       builder: (context) => LoginMainWidget()
                   ),
-                  ModalRoute.withName("/HomwWidget")
+                  ModalRoute.withName("/HomeWidget")
               );
             }, icon: Icon(Icons.logout), label: ralewayText('Logout'), style: ElevatedButton.styleFrom(
               padding: EdgeInsets.all(20)

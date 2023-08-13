@@ -158,6 +158,9 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
                   // familyRef.where("code", isEqualTo: familyCode).get().then((value) => print('value = ${value.docs}')).catchError((onError) => print('Error $onError'));
                   // print('family - ${familySnapshot.docs}');
 
+                  await FirebaseAuth.instance.currentUser?.reload();
+                  var user = FirebaseAuth.instance.currentUser;
+
                   if(familySnapshot.docs.isNotEmpty){
                     Family family = Family.fromJson(familySnapshot.docs.first.data());
                     String familyId = family.id!;
@@ -167,6 +170,9 @@ class _JoinOrCreateFamilyWidgetState extends State<JoinOrCreateFamilyWidget> {
                     if(familyMemberSnapshot.size > 0){
                       //already in the family
                       FamilyMember member = FamilyMember.fromJson(familyMemberSnapshot.docs.first.data());
+                      member.name = currentUser?.displayName??'Family Member';
+                      familyMemberRef.doc(uid).set(member.toJson());
+
                       await saveKeyAsync(uid!, familyId);
                       ScaffoldMessenger.of(context).hideCurrentSnackBar();
                       Navigator.pushAndRemoveUntil(

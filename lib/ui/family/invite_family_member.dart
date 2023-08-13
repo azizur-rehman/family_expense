@@ -15,10 +15,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:material_floating_search_bar_2/material_floating_search_bar_2.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-class InviteMemberWidget  extends StatelessWidget {
+class InviteMemberWidget  extends StatefulWidget {
 
+  @override
+  State<InviteMemberWidget> createState() => _InviteMemberWidgetState();
+}
+
+class _InviteMemberWidgetState extends State<InviteMemberWidget> {
   // final SearchBarController _searchBarController = SearchBarController();
-
   final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
   List<UserData> userList = [];
@@ -37,6 +41,10 @@ class InviteMemberWidget  extends StatelessWidget {
     print('List = $userList');
 
     userList.removeWhere((element) => element.uid == uid);
+
+    setState(() {
+
+    });
 
     return userList;
   }
@@ -79,51 +87,8 @@ class InviteMemberWidget  extends StatelessWidget {
   }
 
   Map<String, String> phoneContacts = Map();
-  // Widget _searchWidget2(BuildContext context, bool hasContactPermission){
-  //
-  //   //bind contact list if has permission
-  //   if(hasContactPermission){
-  //     ContactsService.getContacts().then((value) {
-  //       // phoneContacts = Map.fromIterable(value.toList(), key: (e) => e['label'], value: (e) => e['phone']);
-  //       value.forEach((e) {
-  //         // phoneContacts[element.phones.map((e) => e.value)] = element.phones.first.value;
-  //         if(e.displayName?.isNotEmpty??false)
-  //           phoneContacts[e.displayName??''] = e.phones?.map((e) => e.value).toList().join("|")??'';
-  //       });
-  //       print(phoneContacts);
-  //     }
-  //     );
-  //   }
-  //
-  //   return SearchBar<UserData>(
-  //     // searchBarPadding: EdgeInsets.symmetric(horizontal: 15),
-  //     // searchBarStyle: SearchBarStyle(borderRadius: BorderRadius.circular(30), padding: EdgeInsets.only(left: 10)),
-  //     // headerPadding: EdgeInsets.symmetric(horizontal: 10),
-  //     // listPadding: EdgeInsets.symmetric(horizontal: 10),
-  //     // textStyle: GoogleFonts.roboto().copyWith(fontSize: 20),
-  //     // onSearch: _getUsers,
-  //     // placeHolder: Padding(
-  //     //   padding: const EdgeInsets.all(16.0),
-  //     //   child: ralewayText("Search Phone Numbers"),
-  //     // ),
-  //     // cancellationWidget: Text("Cancel"),
-  //     // emptyWidget: Padding(
-  //     //   padding: const EdgeInsets.all(16.0),
-  //     //   child: ralewayText('No Users Found'),
-  //     // ),
-  //     // onError: (err){
-  //     //   return textMessage('Error occurred ${err.stackTrace.toString()}');
-  //     // },
-  //
-  //     // mainAxisSpacing: 10,
-  //     // crossAxisSpacing: 10,
-  //     // crossAxisCount: 2,
-  //     onItemFound: (UserData user, int index) {
-  //       return ;
-  //     },
-  //   );
-  // }
 
+  // Widget _searchWidget2(BuildContext context, bool hasContactPermission){
   _searchItem(BuildContext context, UserData user, bool hasContactPermission){
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -207,7 +172,6 @@ class InviteMemberWidget  extends StatelessWidget {
 
   }
 
-
   Widget _searchWidget(BuildContext context, bool hasContactPermission) {
     final isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
 
@@ -239,7 +203,7 @@ class InviteMemberWidget  extends StatelessWidget {
       onQueryChanged: _getUsers,
       // Specify a custom transition to be used for
       // animating between opened and closed stated.
-      transition: CircularFloatingSearchBarTransition(),
+      // transition: CircularFloatingSearchBarTransition(),
       actions: [
         FloatingSearchBarAction(
           showIfOpened: false,
@@ -253,27 +217,23 @@ class InviteMemberWidget  extends StatelessWidget {
         ),
       ],
       builder: (context, transition) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Material(
-            color: Colors.white,
-            elevation: 4.0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: Colors.accents.map((color) {
-                return Container(height: 112, color: color);
-              }).toList(),
-            ),
-          ),
-        );
-        // return _searchItem(context, user, hasContactPermission);
+        // return ClipRRect(
+        //   borderRadius: BorderRadius.circular(8),
+        //   child: Material(
+        //     color: Colors.white,
+        //     elevation: 4.0,
+        //     child: Column(
+        //       mainAxisSize: MainAxisSize.min,
+        //       children: Colors.accents.map((color) {
+        //         return Container(height: 112, color: color);
+        //       }).toList(),
+        //     ),
+        //   ),
+        // );
+        return SizedBox(); // _searchItem(context, userList.first, hasContactPermission);
       },
     );
   }
-
-  // _getUsers(String text){
-  //
-  // }
 }
 
 

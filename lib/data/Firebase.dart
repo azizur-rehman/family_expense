@@ -24,28 +24,28 @@ const String key_amount = 'amount', key_remaining = 'remaining';
 
 
 Widget loadName(String? uid, TextStyle style){
-  print('Loading name for - $uid');
+  // print('Loading name for - $uid');
   if(uid == null)
     return Text('No Name');
 
   if(FirebaseAuth.instance.currentUser?.uid == uid) {
     try {
-      return Text(currentUser?.displayName?.capitalize()??'', style: style,);
+      return Text(currentUser?.displayName?.capitalize()??'You', style: style,);
     } catch (e) {
       return SizedBox();
     }
   }
 
-  return FutureBuilder(builder: (builder, snapshot){
+  return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(builder: (builder, snapshot){
     // if(snapshot.hasData)
     //   return snapshot.
     if(snapshot.hasData && !snapshot.hasError) {
       try {
-        UserData user = UserData.fromJson(snapshot.data as Map<String, dynamic> );
+        UserData user = UserData.fromJson(snapshot.data!.data() as Map<String, dynamic> );
         return Text(user.name!.capitalize(), style: style, textAlign: TextAlign.start,);
       }
       catch(e){
-        print('err - $e');
+        // print('err - $e , uid = $uid, data = ${snapshot.data}');
         return Text('No Name', style: style, textAlign: TextAlign.start,);
       }
     }
@@ -73,12 +73,12 @@ Widget loadNameAvatar(String uid){
   if(currentUser != null && currentUser?.uid == uid)
     return circleAvatar(getStringInitials(currentUser!.displayName!));
 
-  return FutureBuilder(builder: (builder, snapshot){
+  return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(builder: (builder, snapshot){
     // if(snapshot.hasData)
     //   return snapshot.
     if(snapshot.hasData && !snapshot.hasError) {
       try {
-        var user = UserData.fromJson(snapshot.data as Map<String, dynamic>);
+        var user = UserData.fromJson(snapshot.data?.data() as Map<String, dynamic>);
         return circleAvatar(getStringInitials(user.name!));
       }
       catch(e){
